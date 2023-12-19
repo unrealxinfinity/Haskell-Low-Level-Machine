@@ -4,7 +4,7 @@
 -- Part 1
 
 module Stack where
-import Data.List (intercalate)
+import Data.List
 -- Do not modify our definition of Inst and Code
 data Inst =
   Push Integer | Add | Mult | Sub | Tru | Fals | Equ | Le | And | Neg | Fetch String | Store String | Noop |
@@ -18,33 +18,32 @@ first (x,_) = x
 second::Pair a b -> b 
 second (_,y) = y
 
-
-
 data StackElement = Boole String | Str String | Intgr Int deriving Show
 type Stack = [StackElement]  
-data StorageElement = StackElement | P (Pair StackElement StackElement) deriving Show
-type State = [StorageElement]
+type State = [Pair String StackElement]
 
 strToStackElem::String->StackElement
 strToStackElem a = Str a
-boolToStackElem::String->StackElement
-boolToStackElem a = Boole a
+boolToStackElem::Bool->StackElement
+boolToStackElem a 
+  | a == True = Boole "tt"
+  | a == False = Boole "ff"
 intToStackElem:: Int->StackElement
 intToStackElem a = Intgr a
-pairToStackElem:: Pair String Int-> StorageElement
-pairToStackElem (a,b) = P ((strToStackElem a),(intToStackElem b)) 
+
 createEmptyStack::Stack
 createEmptyStack = [] 
 createEmptyState::State
 createEmptyState = []
 
 stackElemToString:: StackElement -> String
-stackElemToString (Boole a) = a
+stackElemToString (Boole a)
+  | a == "tt" = "True"
+  | a == "ff" = "False"
 stackElemToString (Str a) = a
 stackElemToString (Intgr i) = show i
-storageElemToString::StorageElement -> String
-storageElemToString (P (a,b)) = (stackElemToString a) ++"="++(stackElemToString b)
-
+stateElemToString::Pair String StackElement->String
+stateElemToString (a,b) = a ++"="++ (stackElemToString b)
 
 
 stack2Str :: Stack -> String
@@ -52,12 +51,17 @@ stack2Str s =
   let rev = reverse s
   in intercalate "," [stackElemToString x | x<-rev]
 
+state2Str :: State -> String
+state2Str s = 
+  let stringList = [stateElemToString x | x <- s]
+  in intercalate "," (sort stringList)
+  
+  
 
 
 
 
--- state2Str :: State -> String
-state2Str = undefined -- TODO
+
 
 -- run :: (Code, Stack, State) -> (Code, Stack, State)
 run = undefined -- TODO
