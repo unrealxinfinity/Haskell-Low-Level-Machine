@@ -3,7 +3,6 @@
 
 -- Part 1
 
-module Stack where
 import Data.List
 -- Do not modify our definition of Inst and Code
 data Inst =
@@ -57,12 +56,6 @@ state2Str s =
   in intercalate "," (sort stringList)
   
   
-
-
-
-
-
-
 -- run :: (Code, Stack, State) -> (Code, Stack, State)
 run = undefined -- TODO
 
