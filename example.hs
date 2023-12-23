@@ -46,9 +46,7 @@ stackElemToStr::StackElement -> String
 stackElemToStr (Str a) = a
 
 pop::Stack->Pair StackElement Stack
-pop stack = (last stack,init stack)
-
-
+pop (h:t) = (h,t)
 
 -- Checks for the data type for StackElements
 isStr:: StackElement->Bool
@@ -65,7 +63,7 @@ isBoole _ = False
 -- For basic arithmetic operations
 executeInstruction :: Inst -> Stack -> Stack
 -- Pushes an integer to the stack
-executeInstruction (Push n) stack = stack ++ [Intgr n]
+executeInstruction (Push n) stack = [Intgr n] ++ stack
 
 executeInstruction Add stack = 
   let 
@@ -79,6 +77,7 @@ executeInstruction Add stack =
 
 --For Storage/State operations
 --executeStorageInstruction::Inst->Stack -> Storage
+
 
 createEmptyStack::Stack
 createEmptyStack = [] 
