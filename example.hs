@@ -25,7 +25,7 @@ type Stack = [StackElement]
 type State = [Pair String StackElement]
  
                                     
--- Converts a ordinary data type to the stack data type for the effect of mixed list
+-- Converts a ordinary data type to the stack data type for the effect of mixed list, some stuff not needed?
 strToStackElem::String->StackElement
 strToStackElem a = Str a
 boolToStackElem::Bool->StackElement
@@ -61,9 +61,9 @@ isBoole _ = False
 
 
 -- For basic arithmetic operations
-executeInstruction :: Inst -> Stack -> Stack
+executeInstruction :: Inst -> Stack ->Stack
 -- Pushes an integer to the stack
-executeInstruction (Push n) stack = [Intgr n] ++ stack
+executeInstruction (Push n) stack = (Intgr n) : stack
 
 executeInstruction Add stack = 
   let 
@@ -73,10 +73,9 @@ executeInstruction Add stack =
     result
       | isIntgr elem1 && isIntgr elem2 = stackElemToInt elem1 + stackElemToInt elem2
       | otherwise = error "Both elements of Add operation must be Integers"
-  in executeInstruction (Push result) resStack
+  in Intgr result : resStack
 
---For Storage/State operations
---executeStorageInstruction::Inst->Stack -> Storage
+  
 
 
 createEmptyStack::Stack
