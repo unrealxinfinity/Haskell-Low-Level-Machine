@@ -25,7 +25,6 @@ type Stack = [StackElement]
 type State = [Pair String StackElement]
 
 
-
 -- Converts a ordinary data type to the stack data type for the effect of mixed list, some stuff not needed?
 strToStackElem::String->StackElement
 strToStackElem a = Str a
@@ -46,9 +45,8 @@ stackElemToBool (Boole a)
 stackElemToStr::StackElement -> String
 stackElemToStr (Str a) = a
 
-pop::Stack->Maybe (Pair StackElement Stack)
-pop (h:t) = Just (h,t)
-pop [] = Nothing
+pop::Stack->Pair StackElement Stack
+pop (h:t) = (h,t)
 
 -- Checks for the data type for StackElements
 isStr:: StackElement->Bool
@@ -67,22 +65,18 @@ executeInstruction :: Inst -> Stack ->Stack
 -- Pushes an integer to the stack
 executeInstruction (Push n) stack = (Intgr n) : stack
 
+--Add instruction
 executeInstruction Add stack = 
   let 
-    elem1 = first . fromJust . pop $ stack
-    elem2 = first . fromJust . pop . second . fromJust . pop $ stack
-    resStack = second . fromJust . pop . second . fromJust . pop $ stack
+    elem1 = first . pop $ stack
+    elem2 = first . pop . second . pop $ stack
+    resStack = second . pop . second . pop $ stack
     result
       | isIntgr elem1 && isIntgr elem2 = stackElemToInt elem1 + stackElemToInt elem2
       | otherwise = error "Both elements of Add operation must be Integers"
   in Intgr result : resStack
 
-searchState:: String -> State -> Maybe (Pair String StackElement)
-searchState needle (stateHead:stateTail)
-  | needle == first stateHead = Just stateHead
-  | otherwise = searchState needle stateTail 
 
-searchState _ [] = Nothing
 
     
   
@@ -114,10 +108,22 @@ state2Str s =
   in intercalate "," (sort stringList)
   
   
--- run :: (Code, Stack, State) -> (Code, Stack, State)
+run :: (Code, Stack, State) -> (Code, Stack, State)
+run ([], stack, state) = ([], stack, state)
+run (Push n:code, stack, state) = run (code, Intgr n:stack, state)
+
+run (Add:code, Intgr elem1:Intgr elem2:stack, state) = run (code, Intgr (elem1+elem2):stack, state)
+run (Sub:code, Intgr elem1:Intgr elem2:stack, state) = run (code, Intgr (elem1-elem2):stack, state)
+run (Mult:code, Intgr elem1:Intgr elem2:stack, state) = run (code, Intgr (elem1*elem2):stack, state)
+
+run (_, _, _) = error "Runtime error"
+
+
+
+
 
 -- To help you test your assembler
-{--testAssembler :: Code -> (String, String)
+testAssembler :: Code -> (String, String)
 testAssembler code = (stack2Str stack, state2Str state)
   where (_,stack,state) = run(code, createEmptyStack, createEmptyState)
   
@@ -155,9 +161,9 @@ compile = undefined -- TODO
 parse = undefined -- TODO
 
 -- To help you test your parser
-testParser :: String -> (String, String)
-testParser programCode = (stack2Str stack, store2Str store)
-  where (_,stack,store) = run(compile (parse programCode), createEmptyStack, createEmptyStore)
+--testParser :: String -> (String, String)
+--testParser programCode = (stack2Str stack, store2Str store)
+  --where (_,stack,store) = run(compile (parse programCode), createEmptyStack, createEmptyStore)
 
 -- Examples:
 -- testParser "x := 5; x := x - 1;" == ("","x=4")
