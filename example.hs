@@ -79,6 +79,9 @@ run (Le:code, Intgr elem1:Intgr elem2:stack, state)
         | elem1 <= elem2 = run (code, T:stack, state)
         | otherwise = run (code, F:stack, state)
 
+run (Tru:code, stack, state) = run (code, T:stack, state)
+run (Fals:code, stack, state) = run (code, F:stack, state)
+
 run(_, _, _) = error "Runtime error"
 
 
