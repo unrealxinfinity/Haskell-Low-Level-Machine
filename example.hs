@@ -17,6 +17,7 @@ first (x,_) = x
 second::Pair a b -> b 
 second (_,y) = y
 
+
 data StackElement = TT | FF | Intgr Integer deriving (Eq, Show)
 -- Mixed list that the last element is the top of the stack
 type Stack = [StackElement]  
@@ -73,6 +74,10 @@ run (Fals:code, stack, state) = run (code, FF:stack, state)
 run (Add:code, Intgr elem1:Intgr elem2:stack, state) = run (code, Intgr (elem1+elem2):stack, state)
 run (Sub:code, Intgr elem1:Intgr elem2:stack, state) = run (code, Intgr (elem1-elem2):stack, state)
 run (Mult:code, Intgr elem1:Intgr elem2:stack, state) = run (code, Intgr (elem1*elem2):stack, state)
+run (And:code, TT:TT:stack, state) = run (code, TT:stack, state)
+run (And:code, FF:TT:stack, state) = run (code, FF:stack, state)
+run (And:code, TT:FF:stack, state) = run (code, FF:stack, state)
+run (And:code, FF:FF:stack, state) = run (code, FF:stack, state)
 
 run (Equ:code, elem1:elem2:stack, state)
         | elem1 == elem2 = run (code, TT:stack, state)
