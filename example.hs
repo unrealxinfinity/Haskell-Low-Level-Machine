@@ -17,7 +17,7 @@ first (x,_) = x
 second::Pair a b -> b 
 second (_,y) = y
 
-data StackElement = T | F | Intgr Integer deriving (Eq, Show)
+data StackElement = TT | FF | Intgr Integer deriving (Eq, Show)
 -- Mixed list that the last element is the top of the stack
 type Stack = [StackElement]  
 
@@ -29,8 +29,8 @@ type State = [Pair String StackElement]
 -- Converts a StackElement to an ordinary data type
 stackElemToString::StackElement -> String
 stackElemToString (Intgr n) = show n
-stackElemToString (T) = "True"
-stackElemToString (F) = "False"
+stackElemToString (TT) = "True"
+stackElemToString (FF) = "False"
 
 
 -- Checks for the data type for StackElements
@@ -65,22 +65,26 @@ state2Str s = intercalate "," (sort [stateElemToString x | x <- s])
   
 run :: (Code, Stack, State) -> (Code, Stack, State)
 run ([], stack, state) = ([], stack, state)
+
 run (Push n:code, stack, state) = run (code, Intgr n:stack, state)
+run (Tru:code, stack, state) = run (code, TT:stack, state)
+run (Fals:code, stack, state) = run (code, FF:stack, state)
 
 run (Add:code, Intgr elem1:Intgr elem2:stack, state) = run (code, Intgr (elem1+elem2):stack, state)
 run (Sub:code, Intgr elem1:Intgr elem2:stack, state) = run (code, Intgr (elem1-elem2):stack, state)
 run (Mult:code, Intgr elem1:Intgr elem2:stack, state) = run (code, Intgr (elem1*elem2):stack, state)
 
 run (Equ:code, elem1:elem2:stack, state)
-        | elem1 == elem2 = run (code, T:stack, state)
-        | otherwise = run (code, F:stack, state)
+        | elem1 == elem2 = run (code, TT:stack, state)
+        | otherwise = run (code, FF:stack, state)
 
 run (Le:code, Intgr elem1:Intgr elem2:stack, state)
-        | elem1 <= elem2 = run (code, T:stack, state)
-        | otherwise = run (code, F:stack, state)
+        | elem1 <= elem2 = run (code, TT:stack, state)
+        | otherwise = run (code, FF:stack, state)
 
-run (Tru:code, stack, state) = run (code, T:stack, state)
-run (Fals:code, stack, state) = run (code, F:stack, state)
+run (Branch code _:_, TT:stack, state) = run (code, stack, state)
+run (Branch _ code:_, FF:stack, state) = run (code, stack, state)
+
 
 run(_, _, _) = error "Runtime error"
 
