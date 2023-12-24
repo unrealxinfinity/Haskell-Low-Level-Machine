@@ -23,8 +23,9 @@ type Stack = [StackElement]
 
 -- List of pairs of String key and StackElement value
 type State = [Pair String StackElement]
- 
-                                    
+
+
+
 -- Converts a ordinary data type to the stack data type for the effect of mixed list, some stuff not needed?
 strToStackElem::String->StackElement
 strToStackElem a = Str a
@@ -45,8 +46,9 @@ stackElemToBool (Boole a)
 stackElemToStr::StackElement -> String
 stackElemToStr (Str a) = a
 
-pop::Stack->Pair StackElement Stack
-pop (h:t) = (h,t)
+pop::Stack->Maybe (Pair StackElement Stack)
+pop (h:t) = Just (h,t)
+pop [] = Nothing
 
 -- Checks for the data type for StackElements
 isStr:: StackElement->Bool
@@ -67,14 +69,22 @@ executeInstruction (Push n) stack = (Intgr n) : stack
 
 executeInstruction Add stack = 
   let 
-    elem1 = first . pop $ stack
-    elem2 = first . pop . second . pop $ stack
-    resStack = second . pop . second . pop $ stack
+    elem1 = first . fromJust . pop $ stack
+    elem2 = first . fromJust . pop . second . fromJust . pop $ stack
+    resStack = second . fromJust . pop . second . fromJust . pop $ stack
     result
       | isIntgr elem1 && isIntgr elem2 = stackElemToInt elem1 + stackElemToInt elem2
       | otherwise = error "Both elements of Add operation must be Integers"
   in Intgr result : resStack
 
+searchState:: String -> State -> Maybe (Pair String StackElement)
+searchState needle (stateHead:stateTail)
+  | needle == first stateHead = Just stateHead
+  | otherwise = searchState needle stateTail 
+
+searchState _ [] = Nothing
+
+    
   
 
 
