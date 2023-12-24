@@ -65,6 +65,7 @@ executeInstruction :: Inst -> Stack ->Stack
 -- Pushes an integer to the stack
 executeInstruction (Push n) stack = (Intgr n) : stack
 
+--Add instruction
 executeInstruction Add stack = 
   let 
     elem1 = first . pop $ stack
@@ -74,6 +75,7 @@ executeInstruction Add stack =
       | isIntgr elem1 && isIntgr elem2 = stackElemToInt elem1 + stackElemToInt elem2
       | otherwise = error "Both elements of Add operation must be Integers"
   in Intgr result : resStack
+
 
   
 
@@ -104,10 +106,22 @@ state2Str s =
   in intercalate "," (sort stringList)
   
   
--- run :: (Code, Stack, State) -> (Code, Stack, State)
+run :: (Code, Stack, State) -> (Code, Stack, State)
+run ([], stack, state) = ([], stack, state)
+run (Push n:code, stack, state) = run (code, Intgr n:stack, state)
+
+run (Add:code, Intgr elem1:Intgr elem2:stack, state) = run(code, Intgr (elem1+elem2):stack, state)
+run (Sub:code, Intgr elem1:Intgr elem2:stack, state) = run(code, Intgr (elem1-elem2):stack, state)
+run (Mult:code, Intgr elem1:Intgr elem2:stack, state) = run(code, Intgr (elem1*elem2):stack, state)
+
+run(_, _, _) = error "Runtime error"
+
+
+
+
 
 -- To help you test your assembler
-{--testAssembler :: Code -> (String, String)
+testAssembler :: Code -> (String, String)
 testAssembler code = (stack2Str stack, state2Str state)
   where (_,stack,state) = run(code, createEmptyStack, createEmptyState)
   
@@ -145,9 +159,9 @@ compile = undefined -- TODO
 parse = undefined -- TODO
 
 -- To help you test your parser
-testParser :: String -> (String, String)
-testParser programCode = (stack2Str stack, store2Str store)
-  where (_,stack,store) = run(compile (parse programCode), createEmptyStack, createEmptyStore)
+--testParser :: String -> (String, String)
+--testParser programCode = (stack2Str stack, store2Str store)
+  --where (_,stack,store) = run(compile (parse programCode), createEmptyStack, createEmptyStore)
 
 -- Examples:
 -- testParser "x := 5; x := x - 1;" == ("","x=4")
