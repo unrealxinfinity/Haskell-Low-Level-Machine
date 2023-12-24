@@ -89,11 +89,13 @@ run (Le:code, Intgr elem1:Intgr elem2:stack, state)
         | elem1 <= elem2 = run (code, TT:stack, state)
         | otherwise = run (code, FF:stack, state)
 
-run (Branch code _:_, TT:stack, state) = run (code, stack, state)
-run (Branch _ code:_, FF:stack, state) = run (code, stack, state)
+run (Branch condition _:code, TT:stack, state) = run (condition ++ code, stack, state)
+run (Branch _ condition:code, FF:stack, state) = run (condition ++ code, stack, state)
+
+run (Loop condition logic:code, stack, state) = run (condition ++ [Branch (logic ++ [Loop condition logic]) [Noop]] ++ code, stack, state)
+
 
 run (Noop:code, stack, state) = run (code, stack, state)
-
 
 run(_, _, _) = error "Runtime error"
 
