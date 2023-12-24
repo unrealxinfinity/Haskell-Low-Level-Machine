@@ -17,7 +17,7 @@ first (x,_) = x
 second::Pair a b -> b 
 second (_,y) = y
 
-data StackElement = Boole String | Str String | Intgr Integer deriving Show
+data StackElement = T | F | Intgr Integer deriving (Eq, Show)
 -- Mixed list that the last element is the top of the stack
 type Stack = [StackElement]  
 
@@ -25,59 +25,24 @@ type Stack = [StackElement]
 type State = [Pair String StackElement]
  
                                     
--- Converts a ordinary data type to the stack data type for the effect of mixed list, some stuff not needed?
-strToStackElem::String->StackElement
-strToStackElem a = Str a
-boolToStackElem::Bool->StackElement
-boolToStackElem a 
-  | a == True = Boole "tt"
-  | a == False = Boole "ff"
-intToStackElem:: Integer->StackElement
-intToStackElem a = Intgr a
 
 -- Converts a StackElement to an ordinary data type
-stackElemToInt::StackElement -> Integer
-stackElemToInt (Intgr a) = fromIntegral a
-stackElemToBool::StackElement -> Bool
-stackElemToBool (Boole a)
-  | a == "tt" = True
-  | a == "ff" = False
-stackElemToStr::StackElement -> String
-stackElemToStr (Str a) = a
+stackElemToString::StackElement -> String
+stackElemToString (Intgr n) = show n
+stackElemToString (T) = "True"
+stackElemToString (F) = "False"
 
-pop::Stack->Pair StackElement Stack
-pop (h:t) = (h,t)
 
 -- Checks for the data type for StackElements
-isStr:: StackElement->Bool
-isStr (Str a) = True
-isStr _ = False
-isIntgr::StackElement->Bool
-isIntgr (Intgr a)= True
-isIntgr _ = False
-isBoole::StackElement -> Bool
-isBoole (Boole a) = True
-isBoole _ = False
-
-
--- For basic arithmetic operations
-executeInstruction :: Inst -> Stack ->Stack
--- Pushes an integer to the stack
-executeInstruction (Push n) stack = (Intgr n) : stack
-
---Add instruction
-executeInstruction Add stack = 
-  let 
-    elem1 = first . pop $ stack
-    elem2 = first . pop . second . pop $ stack
-    resStack = second . pop . second . pop $ stack
-    result
-      | isIntgr elem1 && isIntgr elem2 = stackElemToInt elem1 + stackElemToInt elem2
-      | otherwise = error "Both elements of Add operation must be Integers"
-  in Intgr result : resStack
-
-
-  
+--isStr:: StackElement->Bool
+--isStr (Str a) = True
+--isStr _ = False
+--isIntgr::StackElement->Bool
+--isIntgr (Intgr a)= True
+--isIntgr _ = False
+--isBoole::StackElement -> Bool
+--isBoole (Boole a) = True
+--isBoole _ = False
 
 
 createEmptyStack::Stack
@@ -85,12 +50,6 @@ createEmptyStack = []
 createEmptyState::State
 createEmptyState = []
 
-stackElemToString:: StackElement -> String
-stackElemToString (Boole a)
-  | a == "tt" = "True"
-  | a == "ff" = "False"
-stackElemToString (Str a) = a
-stackElemToString (Intgr i) = show i
 stateElemToString::Pair String StackElement->String
 stateElemToString (a,b) = a ++"="++ (stackElemToString b)
 
@@ -101,18 +60,20 @@ stack2Str s =
   in intercalate "," [stackElemToString x | x<-rev]
 
 state2Str :: State -> String
-state2Str s = 
-  let stringList = [stateElemToString x | x <- s]
-  in intercalate "," (sort stringList)
+state2Str s = intercalate "," (sort [stateElemToString x | x <- s])
   
   
 run :: (Code, Stack, State) -> (Code, Stack, State)
 run ([], stack, state) = ([], stack, state)
 run (Push n:code, stack, state) = run (code, Intgr n:stack, state)
 
-run (Add:code, Intgr elem1:Intgr elem2:stack, state) = run(code, Intgr (elem1+elem2):stack, state)
-run (Sub:code, Intgr elem1:Intgr elem2:stack, state) = run(code, Intgr (elem1-elem2):stack, state)
-run (Mult:code, Intgr elem1:Intgr elem2:stack, state) = run(code, Intgr (elem1*elem2):stack, state)
+run (Add:code, Intgr elem1:Intgr elem2:stack, state) = run (code, Intgr (elem1+elem2):stack, state)
+run (Sub:code, Intgr elem1:Intgr elem2:stack, state) = run (code, Intgr (elem1-elem2):stack, state)
+run (Mult:code, Intgr elem1:Intgr elem2:stack, state) = run (code, Intgr (elem1*elem2):stack, state)
+
+run (Equ:code, elem1:elem2:stack, state)
+        | elem1 == elem2 = run (code, T:stack, state)
+        | otherwise = run (code, F:stack, state)
 
 run(_, _, _) = error "Runtime error"
 
