@@ -77,11 +77,6 @@ executeInstruction Add stack =
   in Intgr result : resStack
 
 
-
-    
-  
-
-
 createEmptyStack::Stack
 createEmptyStack = [] 
 createEmptyState::State
