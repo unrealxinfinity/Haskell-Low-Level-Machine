@@ -27,6 +27,7 @@ type Stack = [StackElement]
 -- Map of pairs of String key and StackElement value
 type State = Map.Map String StackElement
  
+-- Extracts Value from result of lookup on a map, which has Maybe as result
 extractValueFromState:: Maybe StackElement -> StackElement
 extractValueFromState (Just a) = a                                    
 extractValueFromState Nothing = error "Nothing found"
@@ -38,86 +39,90 @@ stackElemToString (TT) = "True"
 stackElemToString (FF) = "False"
 
 
-{-- Checks for the data type for StackElements
---isStr:: StackElement->Bool
---isStr (Str a) = True
---isStr _ = False
---isIntgr::StackElement->Bool
---isIntgr (Intgr a)= True
---isIntgr _ = False
---isBoole::StackElement -> Bool
---isBoole (Boole a) = True
---isBoole _ = False
---}
 
 createEmptyStack::Stack
 createEmptyStack = [] 
 createEmptyState::State
 createEmptyState = Map.empty
 
+-- Converts State element of a map as pair to a string
 stateElemToString::Pair String StackElement->String
 stateElemToString (a,b) = a ++"="++ (stackElemToString b)
 
-
+--Converts Stack elements to string
 stack2Str :: Stack -> String
 stack2Str s = intercalate "," [stackElemToString x | x <- s]
 
+--Converts State elements to string
 state2Str :: State -> String
 state2Str s = intercalate "," (sort [stateElemToString x | x <- (Map.toList s)])
 
 
-
+-- Run fuction to execute instructions according to state and stack
 run :: (Code, Stack, State) -> (Code, Stack, State)
 run ([], stack, state) = ([], stack, state)
 
+-- Executes instruction Push n
 run (Push n:code, stack, state) = run (code, Intgr n:stack, state)
+-- Executes instruction Tru
 run (Tru:code, stack, state) = run (code, TT:stack, state)
+-- Executes instruction Fals
 run (Fals:code, stack, state) = run (code, FF:stack, state)
 
+-- Executes instruction Add
 run (Add:code, Intgr elem1:Intgr elem2:stack, state) = run (code, Intgr (elem1+elem2):stack, state)
 
+-- Executes instruction Sub
 run (Sub:code, Intgr elem1:Intgr elem2:stack, state) = run (code, Intgr (elem1-elem2):stack, state)
 
+-- Executes instruction Mult
 run (Mult:code, Intgr elem1:Intgr elem2:stack, state) = run (code, Intgr (elem1*elem2):stack, state)
 
+-- Executes instruction And
 run (And:code, TT:TT:stack, state) = run (code, TT:stack, state)
 run (And:code, FF:TT:stack, state) = run (code, FF:stack, state)
 run (And:code, TT:FF:stack, state) = run (code, FF:stack, state)
 run (And:code, FF:FF:stack, state) = run (code, FF:stack, state)
 
+-- Executes instruction Neg
 run (Neg:code, TT:stack, state) = run (code, FF:stack, state)
 run (Neg:code, FF:stack, state) = run (code, TT:stack, state)
 
+-- Executes instruction Equ
 run (Equ:code, elem1:elem2:stack, state)
         | elem1 == elem2 = run (code, TT:stack, state)
         | otherwise = run (code, FF:stack, state)
 
+-- Executes instruction Le
 run (Le:code, Intgr elem1:Intgr elem2:stack, state)
         | elem1 <= elem2 = run (code, TT:stack, state)
         | otherwise = run (code, FF:stack, state)
 
+-- Executes instruction Branch
 run (Branch condition _:code, TT:stack, state) = run (condition ++ code, stack, state)
 run (Branch _ condition:code, FF:stack, state) = run (condition ++ code, stack, state)
 
+-- Executes instruction Fetch
 run (Fetch n:code,stack,state) =
   let 
     element = extractValueFromState $ Map.lookup n state
   in run (code,(element:stack),state)
 
+-- Executes instruction Store
 run (Store n:code,(topStack:stack),state) =
   let 
     newState = Map.insert n topStack state
   in run(code,stack,newState)
+run (Store n:code, [],state) = error "Nothing to store"
 
+-- Executes instruction Loop
 run (Loop condition logic:code, stack, state) = run (condition ++ [Branch (logic ++ [Loop condition logic]) [Noop]] ++ code, stack, state)
 
-
+-- Executes instruction Noop
 run (Noop:code, stack, state) = run (code, stack, state)
 
+-- In case the pattern matching doesn match any of above cases, its a runtime error
 run (_, _, _) = error "Runtime error"
-
-
-
 
 
 -- To help you test your assembler
