@@ -56,9 +56,7 @@ stateElemToString (a,b) = a ++"="++ (stackElemToString b)
 
 
 stack2Str :: Stack -> String
-stack2Str s = 
-  let rev = reverse s
-  in intercalate "," [stackElemToString x | x<-rev]
+stack2Str s = intercalate "," [stackElemToString x | x <- s]
 
 state2Str :: State -> String
 state2Str s = intercalate "," (sort [stateElemToString x | x <- s])
