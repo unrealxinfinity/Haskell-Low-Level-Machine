@@ -85,6 +85,8 @@ run (Le:code, Intgr elem1:Intgr elem2:stack, state)
 run (Branch code _:_, TT:stack, state) = run (code, stack, state)
 run (Branch _ code:_, FF:stack, state) = run (code, stack, state)
 
+run (Noop:code, stack, state) = run (code, stack, state)
+
 
 run(_, _, _) = error "Runtime error"
 
