@@ -27,10 +27,6 @@ type Stack = [StackElement]
 -- Map of pairs of String key and StackElement value
 type State = Map.Map String StackElement
  
--- Extracts Value from result of lookup on a map, which has Maybe as result
-extractValueFromState:: Maybe StackElement -> StackElement
-extractValueFromState (Just a) = a                                    
-extractValueFromState Nothing = error "Nothing found"
 
 -- Converts a StackElement to an ordinary data type
 stackElemToString::StackElement -> String
@@ -103,17 +99,12 @@ run (Branch condition _:code, TT:stack, state) = run (condition ++ code, stack, 
 run (Branch _ condition:code, FF:stack, state) = run (condition ++ code, stack, state)
 
 -- Executes instruction Fetch
-run (Fetch n:code,stack,state) =
-  let 
-    element = extractValueFromState $ Map.lookup n state
-  in run (code,(element:stack),state)
+run (Fetch n:code,stack,state)
+        | Just element <- Map.lookup n state = run (code, element:stack, state)
 
 -- Executes instruction Store
-run (Store n:code,(topStack:stack),state) =
-  let 
-    newState = Map.insert n topStack state
-  in run(code,stack,newState)
-run (Store n:code, [],state) = error "Nothing to store"
+run (Store key:code, elem:stack, state) = run(code,stack,newState)
+        where newState = Map.insert key elem state
 
 -- Executes instruction Loop
 run (Loop condition logic:code, stack, state) = run (condition ++ [Branch (logic ++ [Loop condition logic]) [Noop]] ++ code, stack, state)
@@ -122,7 +113,7 @@ run (Loop condition logic:code, stack, state) = run (condition ++ [Branch (logic
 run (Noop:code, stack, state) = run (code, stack, state)
 
 -- In case the pattern matching doesn match any of above cases, its a runtime error
-run (_, _, _) = error "Runtime error"
+run (_, _, _) = error "Run-time error"
 
 
 -- To help you test your assembler
@@ -190,3 +181,17 @@ parse = undefined -- TODO
 -- testParser "x := 42; if x <= 43 then x := 1; else x := 33; x := x+1; z := x+x;" == ("","x=2,z=4")
 -- testParser "x := 2; y := (x - 3)*(4 + 2*3); z := x +x*(2);" == ("","x=2,y=-10,z=6")
 -- testParser "i := 10; fact := 1; while (not(i == 1)) do (fact := fact * i; i := i - 1;);" == ("","fact=3628800,i=1") --}
+
+
+
+
+--Old fetch function
+ -- let 
+   -- element = extractValueFromState $ Map.lookup n state
+  --in run (code,(element:stack),state)
+
+
+-- Extracts Value from result of lookup on a map, which has Maybe as result
+--extractValueFromState:: Maybe StackElement -> StackElement
+--extractValueFromState (Just a) = a                                    
+--extractValueFromState Nothing = error "Nothing found"
