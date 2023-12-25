@@ -156,14 +156,37 @@ run_tests _ = error "Please submit right input number"
 
 -- TODO: Define the types Aexp, Bexp, Stm and Program
 
--- compA :: Aexp -> Code
-compA = undefined -- TODO
+data Aexp = T | F | Var String | Const Integer | ADDexp Aexp Aexp | SUBexp Aexp Aexp | MULTexp Aexp Aexp deriving Show 
+
+data Bexp = EQexp Aexp Aexp | LEQexp Aexp Aexp | ANDexp Aexp Aexp | NEGexp Aexp deriving Show
+
+data Stm = Assign Aexp Aexp deriving Show
+
+type Program = [Stm]
+
+
+test :: [Stm] -> Stm
+test n = head n
+
+compA :: Aexp -> Code
+compA T = [Tru]
+compA F = [Fals]
+compA (Var var) = [Fetch var]
+compA (Const const) = [Push const]
+compA (ADDexp elem1 elem2) = compA elem2 ++ compA elem1 ++ [Add]
+compA (SUBexp elem1 elem2) = compA elem2 ++ compA elem1 ++ [Sub]
+compA (MULTexp elem1 elem2) = compA elem2 ++ compA elem1 ++ [Mult]
 
 -- compB :: Bexp -> Code
-compB = undefined -- TODO
+compB (EQexp elem1 elem2) = compA elem2 ++ compA elem1 ++ [Equ]
+compB (LEQexp elem1 elem2) = compA elem2 ++ compA elem1 ++ [Le]
+compB (NEGexp elem) = compA elem ++ [Neg]
 
 -- compile :: Program -> Code
-compile = undefined -- TODO
+compile [] = []
+compile (Assign (Var var) aexp:stms) = compA aexp ++ [Store var] ++ compile stms
+
+
 
 -- parse :: String -> Program
 parse = undefined -- TODO
