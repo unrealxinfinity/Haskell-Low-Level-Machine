@@ -165,9 +165,6 @@ data Stm = Assign Aexp Aexp deriving Show
 type Program = [Stm]
 
 
-test :: [Stm] -> Stm
-test n = head n
-
 compA :: Aexp -> Code
 compA T = [Tru]
 compA F = [Fals]
@@ -188,13 +185,13 @@ compile (Assign (Var var) aexp:stms) = compA aexp ++ [Store var] ++ compile stms
 
 
 
--- parse :: String -> Program
-parse = undefined -- TODO
+parse :: String -> Program
+parse programCode = [Assign (Var "hello") $ Const 3] 
 
 -- To help you test your parser
---testParser :: String -> (String, String)
---testParser programCode = (stack2Str stack, store2Str store)
-  --where (_,stack,store) = run(compile (parse programCode), createEmptyStack, createEmptyStore)
+testParser :: String -> (String, String)
+testParser programCode = (stack2Str stack, state2Str state)
+  where (_,stack,state) = run(compile (parse programCode), createEmptyStack, createEmptyState)
 
 -- Examples:
 -- testParser "x := 5; x := x - 1;" == ("","x=4")
@@ -207,14 +204,3 @@ parse = undefined -- TODO
 
 
 
-
---Old fetch function
- -- let 
-   -- element = extractValueFromState $ Map.lookup n state
-  --in run (code,(element:stack),state)
-
-
--- Extracts Value from result of lookup on a map, which has Maybe as result
---extractValueFromState:: Maybe StackElement -> StackElement
---extractValueFromState (Just a) = a                                    
---extractValueFromState Nothing = error "Nothing found"
