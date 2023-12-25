@@ -129,6 +129,20 @@ run (_, _, _) = error "Runtime error"
 testAssembler :: Code -> (String, String)
 testAssembler code = (stack2Str stack, state2Str state)
   where (_,stack,state) = run(code, createEmptyStack, createEmptyState)
+
+run_tests :: Integer -> (String, String)
+run_tests 1 = testAssembler [Push 10,Push 4,Push 3,Sub,Mult]
+run_tests 2 = testAssembler [Fals,Push 3,Tru,Store "var",Store "a", Store "someVar"]
+run_tests 3 = testAssembler [Fals,Store "var",Fetch "var"]
+run_tests 4 = testAssembler [Push (-20),Tru,Fals]
+run_tests 5 = testAssembler [Push (-20),Tru,Tru,Neg]
+run_tests 6 = testAssembler [Push (-20),Tru,Tru,Neg,Equ]
+run_tests 7 = testAssembler [Push (-20),Push (-21), Le]
+run_tests 8 = testAssembler [Push 5,Store "x",Push 1,Fetch "x",Sub,Store "x"]
+run_tests 9 = testAssembler [Push 10,Store "i",Push 1,Store "fact",Loop [Push 1,Fetch "i",Equ,Neg] [Fetch "i",Fetch "fact",Mult,Store "fact",Push 1,Fetch "i",Sub,Store "i"]]
+run_tests 10 = testAssembler [Push 1,Push 2,And]
+run_tests 11 = testAssembler [Tru,Tru,Store "y", Fetch "x",Tru]
+run_tests _ = error "Please submit right input number"
   
 -- Examples:
 -- testAssembler [Push 10,Push 4,Push 3,Sub,Mult] == ("-10","")
