@@ -162,7 +162,8 @@ data Bexp = BexpA Aexp | EQexp Bexp Bexp | LEQexp Bexp Bexp | ANDexp Bexp Bexp |
 data Stm = Assign Aexp Aexp | Lp Bexp Aexp | Conditional Bexp Program Program deriving Show
 type Program = [Stm]
 
-data Token = EqualTok | PlusTok | MinusTok | TimesTok | VarTok String | IntTok Integer | IfTok | ThenTok | ElseTok deriving Show
+data Token = EqualTok | PlusTok | MinusTok | TimesTok | OpenParTok | CloseParTok | VarTok String | IntTok Integer | IfTok | ThenTok | ElseTok | ColonTok deriving Show
+
 
 compA :: Aexp -> Code
 compA T = [Tru]
@@ -196,50 +197,65 @@ lexer :: String -> [Token]
 
 lexer [] = []
 
+lexer (chr:restStr)
+      | isSpace chr = lexer restStr
 lexer ('+':restStr) = PlusTok:lexer restStr
 lexer ('-':restStr) = MinusTok:lexer restStr
 lexer ('*':restStr) = TimesTok:lexer restStr
 lexer (':':'=':restStr) = EqualTok:lexer restStr
-lexer (chr:restStr)
-      | isSpace chr = lexer restStr
+lexer (';':restStr) = ColonTok:lexer restStr
+lexer ('(':restStr) = OpenParTok:lexer restStr
+lexer (')':restStr) = CloseParTok:lexer restStr
+lexer ('i':'f':restStr) = IfTok:lexer restStr
+lexer ('t':'h':'e':'n':restStr) = ThenTok:lexer restStr
+lexer ('e':'l':'s':'e':restStr) = ElseTok:lexer restStr
 lexer str@(chr : _)
       | isDigit chr = IntTok (stringToInt digitStr) : lexer restStr
       where
         (digitStr, restStr) = break (not . isDigit) str
-
 lexer str@(chr : _)
       | isAlpha chr = VarTok varStr : lexer restStr
       where (varStr, restStr) = break (not . isAlpha) str
-
-lexer ('i':'f':restStr) = IfTok:lexer restStr
-lexer ('t':'h':'e':'n':restStr) = ThenTok:lexer restStr
-lexer ('e':'l':'s':'e':restStr) = ElseTok:lexer restStr
-
 lexer (chr : restStr) = error ("unexpected character: '" ++ show chr ++ "'")
 
-parseVar :: [Token] -> Maybe (Aexp, [Token])
-parseVar (VarTok elem:tokens) =
-      Just (Var elem, tokens)
-
-parseVar _ =
-      Nothing
-
-parseInt :: [Token] -> Maybe (Aexp, [Token])
-parseInt (IntTok elem:tokens) =
+parseAexpType :: [Token] -> Maybe (Aexp, [Token])
+parseAexpType (IntTok elem:tokens) =
       Just (Const elem, tokens)
 
-parseInt _ =
+parseAexpType (VarTok elem:tokens) =
+      Just (Var elem, tokens)
+
+
+parseAexpType (OpenParTok:tokens) =
+      case parseSumOrSubOrProdOrInt tokens of
+        Just (expr, CloseParTok:tokens1) ->
+          Just (expr, tokens1)
+        Just _ -> Nothing
+        Nothing -> Nothing
+
+parseAexpType _ =
       Nothing
 
+{--parseBexp:: [Token] -> Maybe (Bexp,[Token])
+parseBexp (IntTok elem:restTok) = 
+  case parseBexp resTok of
+    Just (BexpA Const elem,[restTok])
+    Nothing ->Nothing
+--}
+
+{--parseBexp (beforeTok:EqualTok:afterTok) =
+  case parseBexp beforeTok of
+--}
 parseProdOrInt :: [Token] -> Maybe (Aexp, [Token])
 parseProdOrInt tokens =
-      case parseInt tokens of 
+      case parseAexpType tokens of 
         Just (aexp1, TimesTok:tokens1) ->
           case parseProdOrInt tokens1 of
             Just (aexp2, tokens2) ->
               Just (MULTexp aexp1 aexp2, tokens2)
             Nothing -> Nothing
         result -> result
+
 
 
 parseSumOrSubOrProdOrInt :: [Token] -> Maybe (Aexp, [Token])
@@ -260,20 +276,34 @@ parseSumOrSubOrProdOrInt tokens =
         result -> result
 
 parseStm :: [Token] -> Maybe (Stm, [Token])
+parseStm [] = Nothing
 parseStm tokens = 
-      case parseVar tokens of
-          Just (varStr, EqualTok:tokens1) ->
+      case parseAexpType tokens of
+          Just (Var varName, EqualTok:tokens1) ->
             case parseSumOrSubOrProdOrInt tokens1 of
               Just (aexp, tokens2) ->
-                Just (Assign varStr aexp, tokens2)
+                Just (Assign (Var varName) aexp, tokens2)
               Nothing -> Nothing
 
-  
+          result -> Nothing
+
+{--parseStm (IfTok:OpenParTok:tokens) = 
+      case parseBexp tokens of
+          Just (Var varName, EqualTok:tokens1) ->
+            case ? tokens1 of
+              Just (aexp, tokens2) ->
+                Just (Assign (Var varName) aexp, tokens2)
+              Nothing -> Nothing
+
+          result -> Nothing
+--}
+
 
 buildData :: [Token] -> Program
+buildData [] = []
 buildData tokens = 
       case parseStm tokens of
-          Just (stm, []) -> [stm]
+          Just (stm, ColonTok:tokens1) -> [stm] ++ buildData tokens1
           _ -> error "Parse error"
 
 
