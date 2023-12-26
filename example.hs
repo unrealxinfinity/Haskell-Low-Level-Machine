@@ -159,14 +159,10 @@ run_tests _ = error "Please submit right input number"
 data Aexp = T | F | Var String | Const Integer | ADDexp Aexp Aexp | SUBexp Aexp Aexp | MULTexp Aexp Aexp deriving Show 
 
 data Bexp = BexpA Aexp | EQexp Bexp Bexp | LEQexp Bexp Bexp | ANDexp Bexp Bexp | NEGexp Bexp deriving Show
-data Cexp = If Bexp | Then Aexp | Else Aexp deriving Show
-data Lexp = While Aexp | Do Aexp deriving Show
-data Stm = Assign Aexp Aexp | Lp Lexp Lexp | Conditional Cexp Cexp Cexp deriving Show
-
+data Stm = Assign Aexp Aexp | Lp Bexp Aexp | Conditional Bexp Program Program deriving Show
 type Program = [Stm]
 
-data Token = EqualTok | PlusTok | MinusTok | TimesTok | VarTok String | IntTok Integer deriving Show
-
+data Token = EqualTok | PlusTok | MinusTok | TimesTok | VarTok String | IntTok Integer | IfTok | ThenTok | ElseTok deriving Show
 
 compA :: Aexp -> Code
 compA T = [Tru]
@@ -186,13 +182,12 @@ compB (ANDexp elem1 elem2) = compB elem2 ++ compB elem1 ++ [And]
 
 
 compile :: Program -> Code
-compile [] = []
+compile [] = [Noop]
 compile (Assign (Var var) aexp:program) = compA (aexp) ++ [Store var] ++ compile (program)
-compile (Conditional (If bexp) (Then aexp) (Else aexp2):program) = compB bexp ++ [Branch aexpCalculated aexpCalculated2] ++ compile (program)
+compile (Conditional bexp stm1 stm2:program) = compB bexp ++ [Branch progCalculated progCalculated2] ++ compile (program)
    where 
-    aexpCalculated = compA aexp
-    aexpCalculated2 = compA aexp2
-
+    progCalculated = compile stm1
+    progCalculated2 = compile stm2
 stringToInt :: String -> Integer
 stringToInt = foldl (\acc chr->10*acc+ toInteger (digitToInt chr)) 0
 
@@ -215,9 +210,12 @@ lexer str@(chr : _)
 lexer str@(chr : _)
       | isAlpha chr = VarTok varStr : lexer restStr
       where (varStr, restStr) = break (not . isAlpha) str
-      
 
-lexer (chr : restString) = error ("unexpected character: '" ++ show chr ++ "'")
+lexer ('i':'f':restStr) = IfTok:lexer restStr
+lexer ('t':'h':'e':'n':restStr) = ThenTok:lexer restStr
+lexer ('e':'l':'s':'e':restStr) = ElseTok:lexer restStr
+
+lexer (chr : restStr) = error ("unexpected character: '" ++ show chr ++ "'")
 
 parseVar :: [Token] -> Maybe (Aexp, [Token])
 parseVar (VarTok elem:tokens) =
@@ -269,7 +267,6 @@ parseStm tokens =
               Just (aexp, tokens2) ->
                 Just (Assign varStr aexp, tokens2)
               Nothing -> Nothing
-
 
   
 
