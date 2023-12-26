@@ -5,6 +5,7 @@
 
 import Data.List
 import qualified Data.Map as Map
+import Data.Char (isSpace, isDigit, digitToInt, isAlpha)
 
 -- Do not modify our definition of Inst and Code
 data Inst =
@@ -158,11 +159,13 @@ run_tests _ = error "Please submit right input number"
 
 data Aexp = T | F | Var String | Const Integer | ADDexp Aexp Aexp | SUBexp Aexp Aexp | MULTexp Aexp Aexp deriving Show 
 
-data Bexp = EQexp Aexp Aexp | LEQexp Aexp Aexp | ANDexp Aexp Aexp | NEGexp Aexp deriving Show
+data Bexp = Aexp | EQexp Aexp Aexp | LEQexp Aexp Aexp | ANDexp Aexp Aexp | NEGexp Aexp deriving Show
 
 data Stm = Assign Aexp Aexp deriving Show
 
 type Program = [Stm]
+
+data Token = EqualTok | PlusTok | MinusTok | TimesTok | VarTok String | IntTok Integer deriving Show
 
 
 compA :: Aexp -> Code
@@ -181,12 +184,97 @@ compB (NEGexp elem) = compA elem ++ [Neg]
 
 -- compile :: Program -> Code
 compile [] = []
-compile (Assign (Var var) aexp:stms) = compA aexp ++ [Store var] ++ compile stms
+compile (Assign (Var var) aexp:program) = compA (aexp) ++ [Store var] ++ compile (program)
 
+stringToInt :: String -> Integer
+stringToInt = foldl (\acc chr->10*acc+ toInteger (digitToInt chr)) 0
+
+
+lexer :: String -> [Token]
+
+lexer [] = []
+
+lexer ('+':restStr) = PlusTok:lexer restStr
+lexer ('-':restStr) = MinusTok:lexer restStr
+lexer ('*':restStr) = TimesTok:lexer restStr
+lexer (':':'=':restStr) = EqualTok:lexer restStr
+lexer (chr:restStr)
+      | isSpace chr = lexer restStr
+lexer str@(chr : _)
+      | isDigit chr = IntTok (stringToInt digitStr) : lexer restStr
+      where
+        (digitStr, restStr) = break (not . isDigit) str
+
+lexer str@(chr : _)
+      | isAlpha chr = VarTok varStr : lexer restStr
+      where (varStr, restStr) = break (not . isAlpha) str
+      
+
+lexer (chr : restString) = error ("unexpected character: '" ++ show chr ++ "'")
+
+parseVar :: [Token] -> Maybe (Aexp, [Token])
+parseVar (VarTok elem:tokens) =
+      Just (Var elem, tokens)
+
+parseVar _ =
+      Nothing
+
+parseInt :: [Token] -> Maybe (Aexp, [Token])
+parseInt (IntTok elem:tokens) =
+      Just (Const elem, tokens)
+
+parseInt _ =
+      Nothing
+
+parseProdOrInt :: [Token] -> Maybe (Aexp, [Token])
+parseProdOrInt tokens =
+      case parseInt tokens of 
+        Just (aexp1, TimesTok:tokens1) ->
+          case parseProdOrInt tokens1 of
+            Just (aexp2, tokens2) ->
+              Just (MULTexp aexp1 aexp2, tokens2)
+            Nothing -> Nothing
+        result -> result
+
+
+parseSumOrSubOrProdOrInt :: [Token] -> Maybe (Aexp, [Token])
+parseSumOrSubOrProdOrInt tokens =
+      case parseProdOrInt tokens of
+        Just (aexp1, PlusTok:tokens1) ->
+          case parseSumOrSubOrProdOrInt tokens1 of
+            Just(aexp2, tokens2) ->
+              Just (ADDexp aexp1 aexp2, tokens2)
+            Nothing -> Nothing
+
+        Just (aexp1, MinusTok:tokens1) ->
+          case parseSumOrSubOrProdOrInt tokens1 of
+            Just(aexp2, tokens2) ->
+              Just(SUBexp aexp1 aexp2, tokens2)
+            Nothing -> Nothing
+
+        result -> result
+
+parseStm :: [Token] -> Maybe (Stm, [Token])
+parseStm tokens = 
+      case parseVar tokens of
+          Just (varStr, EqualTok:tokens1) ->
+            case parseSumOrSubOrProdOrInt tokens1 of
+              Just (aexp, tokens2) ->
+                Just (Assign varStr aexp, tokens2)
+              Nothing -> Nothing
+
+
+  
+
+buildData :: [Token] -> Program
+buildData tokens = 
+      case parseStm tokens of
+          Just (stm, []) -> [stm]
+          _ -> error "Parse error"
 
 
 parse :: String -> Program
-parse programCode = [Assign (Var "hello") $ Const 3] 
+parse programCode = buildData . lexer $ programCode
 
 -- To help you test your parser
 testParser :: String -> (String, String)
