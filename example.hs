@@ -154,14 +154,14 @@ run_tests _ = error "Please submit right input number"
 -- You should get an exception with the string: "Run-time error"
 
 -- Part 2
-
 -- TODO: Define the types Aexp, Bexp, Stm and Program
 
 data Aexp = T | F | Var String | Const Integer | ADDexp Aexp Aexp | SUBexp Aexp Aexp | MULTexp Aexp Aexp deriving Show 
 
-data Bexp = Aexp | EQexp Aexp Aexp | LEQexp Aexp Aexp | ANDexp Aexp Aexp | NEGexp Aexp deriving Show
-
-data Stm = Assign Aexp Aexp deriving Show
+data Bexp = BexpA Aexp | EQexp Bexp Bexp | LEQexp Bexp Bexp | ANDexp Bexp Bexp | NEGexp Bexp deriving Show
+data Cexp = If Bexp | Then Aexp | Else Aexp deriving Show
+data Lexp = While Aexp | Do Aexp deriving Show
+data Stm = Assign Aexp Aexp | Lp Lexp Lexp | Conditional Cexp Cexp Cexp deriving Show
 
 type Program = [Stm]
 
@@ -177,14 +177,21 @@ compA (ADDexp elem1 elem2) = compA elem2 ++ compA elem1 ++ [Add]
 compA (SUBexp elem1 elem2) = compA elem2 ++ compA elem1 ++ [Sub]
 compA (MULTexp elem1 elem2) = compA elem2 ++ compA elem1 ++ [Mult]
 
--- compB :: Bexp -> Code
-compB (EQexp elem1 elem2) = compA elem2 ++ compA elem1 ++ [Equ]
-compB (LEQexp elem1 elem2) = compA elem2 ++ compA elem1 ++ [Le]
-compB (NEGexp elem) = compA elem ++ [Neg]
+compB :: Bexp -> Code
+compB (BexpA aexp) = compA aexp
+compB (EQexp elem1 elem2) = compB elem2 ++ compB elem1 ++ [Equ]
+compB (LEQexp elem1 elem2) = compB elem2 ++ compB elem1 ++ [Le]
+compB (NEGexp elem) = compB elem ++ [Neg]
+compB (ANDexp elem1 elem2) = compB elem2 ++ compB elem1 ++ [And]
 
--- compile :: Program -> Code
+
+compile :: Program -> Code
 compile [] = []
 compile (Assign (Var var) aexp:program) = compA (aexp) ++ [Store var] ++ compile (program)
+compile (Conditional (If bexp) (Then aexp) (Else aexp2):program) = compB bexp ++ [Branch aexpCalculated aexpCalculated2] ++ compile (program)
+   where 
+    aexpCalculated = compA aexp
+    aexpCalculated2 = compA aexp2
 
 stringToInt :: String -> Integer
 stringToInt = foldl (\acc chr->10*acc+ toInteger (digitToInt chr)) 0
