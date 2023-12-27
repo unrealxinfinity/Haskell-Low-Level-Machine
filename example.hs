@@ -169,7 +169,7 @@ data Bexp = BexpA Aexp | EQexp Bexp Bexp | BoolEQexp Bexp Bexp | LEQexp Bexp Bex
 data Stm = Assign String Aexp | Lp Bexp Program | Conditional Bexp Program Program deriving Show
 type Program = [Stm]
 
-data Token = EqualTok | PlusTok | MinusTok | TimesTok | IneqTok | EqTok | NotTok | BoolEqTok | OpenParTok | CloseParTok | TrueTok | FalseTok | VarTok String | IntTok Integer | IfTok | ThenTok | ElseTok | ColonTok deriving Show
+data Token = EqualTok | PlusTok | MinusTok | TimesTok | IneqTok | EqTok | NotTok | BoolEqTok | AndTok | OpenParTok | CloseParTok | TrueTok | FalseTok | VarTok String | IntTok Integer | IfTok | ThenTok | ElseTok | ColonTok deriving Show
 
 
 isBooleanEQ :: Bexp -> Bool
@@ -229,6 +229,7 @@ lexer (':':'=':restStr) = EqualTok:lexer restStr
 lexer ('<':'=':restStr) = IneqTok:lexer restStr
 lexer ('=':'=':restStr) = EqTok:lexer restStr
 lexer ('=':restStr) = BoolEqTok:lexer restStr
+lexer ('a':'n':'d':restStr) = AndTok:lexer restStr
 lexer (';':restStr) = ColonTok:lexer restStr
 lexer ('(':restStr) = OpenParTok:lexer restStr
 lexer (')':restStr) = CloseParTok:lexer restStr
@@ -269,8 +270,8 @@ parseAexpType (VarTok elem:tokens) =
 
 parseAexpType (OpenParTok:tokens) =
       case parseSumOrSubOrProdOrInt tokens of
-        Just (expr, CloseParTok:tokens1) ->
-          Just (expr, tokens1)
+        Just (aexp, CloseParTok:tokens1) ->
+          Just (aexp, tokens1)
         Just _ -> Nothing
         Nothing -> Nothing
 
@@ -279,11 +280,23 @@ parseAexpType _ =
 
 
 parseBexpType :: [Token] -> Maybe (Bexp, [Token])
+parseBexpType (OpenParTok:tokens) =
+      case parseAndOrBoolEqOrNotOrEqOrIneq tokens of
+        Just (bexp, CloseParTok:tokens1) ->
+          Just (bexp, tokens1)
+        _ -> 
+          case parseAexpType (OpenParTok:tokens) of
+            Just (aexp, tokens1) ->
+              Just (BexpA aexp, tokens1)
+            Nothing -> Nothing
+
+
 parseBexpType (tokens) =
       case parseAexpType tokens of
         Just (aexp, tokens1) ->
           Just (BexpA aexp, tokens1)
         Nothing -> Nothing
+
 
 
 parseProdOrInt :: [Token] -> Maybe (Aexp, [Token])
@@ -360,6 +373,17 @@ parseBoolEqOrNotOrEqOrIneq tokens =
 
         result -> result
 
+parseAndOrBoolEqOrNotOrEqOrIneq :: [Token] -> Maybe (Bexp, [Token])
+parseAndOrBoolEqOrNotOrEqOrIneq tokens =
+      case parseBoolEqOrNotOrEqOrIneq tokens of
+        Just (bexp, AndTok:tokens1) ->
+          case parseAndOrBoolEqOrNotOrEqOrIneq tokens1 of
+            Just (bexp1, tokens2) ->
+              Just (ANDexp bexp bexp1, tokens2)
+            Nothing -> Nothing
+
+        result -> result
+
 
 
 isValidConditionFormat :: [Token] -> Int -> Bool
@@ -384,7 +408,7 @@ parseStm :: [Token] -> Maybe (Stm, [Token])
 parseStm [] = Nothing
 
 parseStm (IfTok:OpenParTok:tokens) = 
-      case parseBoolEqOrNotOrEqOrIneq tokens of
+      case parseAndOrBoolEqOrNotOrEqOrIneq tokens of
         Just (bexp, CloseParTok:ThenTok:tokens1) ->
           case branchFormat tokens1 of
             (stm1, ElseTok:tokens2) ->
@@ -398,7 +422,7 @@ parseStm (IfTok:OpenParTok:tokens) =
 
 parseStm (IfTok:tokens)
       | isValidConditionFormat (tokens) (2) == True =
-              case parseBoolEqOrNotOrEqOrIneq tokens of
+              case parseAndOrBoolEqOrNotOrEqOrIneq tokens of
                 Just (bexp, ThenTok:tokens1) ->
                   case branchFormat tokens1 of
                     (stm1, ElseTok:tokens2) ->
