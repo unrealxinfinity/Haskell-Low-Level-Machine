@@ -327,7 +327,12 @@ parseNot tokens =
   --    case parseNot tokens of
     --    Just (bexp, tokens1)
 
-
+isValidConditionFormat :: [Token] -> Int -> Bool
+isValidConditionFormat _ 2 = False
+isValidConditionFormat (ThenTok:_) _ = True
+isValidConditionFormat (IntTok elem:tokens) (counter) = isValidConditionFormat tokens counter
+isValidConditionFormat (VarTok elem:tokens) (counter) = isValidConditionFormat tokens counter
+isValidConditionFormat (_:tokens) (counter) = isValidConditionFormat tokens (counter+1)
 
 parseStm :: [Token] -> Maybe (Stm, [Token])
 
@@ -343,6 +348,18 @@ parseStm (IfTok:OpenParTok:tokens) =
                   Just (Conditional (bexp) (stm1) (stm2), ColonTok:tokens3)
         
         result -> Nothing
+
+parseStm (IfTok:tokens)
+      | isValidConditionFormat (tokens) (0) == True =
+            case parseNot tokens of
+              Just (bexp, ThenTok:tokens1) ->
+                case buildData tokens1 of
+                  (stm1, tokens2) ->
+                    case buildData tokens2 of
+                      (stm2, tokens3) -> 
+                        Just (Conditional (bexp) (stm1) (stm2), ColonTok:tokens3)
+              
+              result -> Nothing
         
 parseStm tokens = 
       case parseAexpType tokens of
