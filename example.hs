@@ -169,7 +169,7 @@ data Bexp = BexpA Aexp | EQexp Bexp Bexp | BoolEQexp Bexp Bexp | LEQexp Bexp Bex
 data Stm = Assign String Aexp | Lp Bexp Program | Conditional Bexp Program Program deriving Show
 type Program = [Stm]
 
-data Token = EqualTok | PlusTok | MinusTok | TimesTok | IneqTok | EqTok | NotTok | BoolEqTok | AndTok | OpenParTok | CloseParTok | TrueTok | FalseTok | VarTok String | IntTok Integer | IfTok | ThenTok | ElseTok | ColonTok deriving Show
+data Token = EqualTok | PlusTok | MinusTok | TimesTok | IneqTok | EqTok | NotTok | BoolEqTok | AndTok | OpenParTok | CloseParTok | TrueTok | FalseTok | VarTok String | IntTok Integer | IfTok | ThenTok | ElseTok | ColonTok | WhileTok | DoTok deriving Show
 
 
 isBooleanEQ :: Bexp -> Bool
@@ -236,6 +236,8 @@ lexer ('e':'l':'s':'e':restStr) = ElseTok:lexer restStr
 lexer ('n':'o':'t':restStr) = NotTok:lexer restStr
 lexer ('T':'r':'u':'e':restStr) = TrueTok:lexer restStr
 lexer ('F':'a':'l':'s':'e':restStr) = FalseTok:lexer restStr
+lexer ('w':'h':'i':'l':'e':restStr) = WhileTok:lexer restStr
+lexer ('d':'o':restStr) = DoTok:lexer restStr
 
 lexer str@(chr : _)
       | isDigit chr = IntTok (stringToInt digitStr) : lexer restStr
@@ -417,7 +419,8 @@ parseStm (VarTok varName:EqualTok:tokens) =
             Just (aexp, tokens1) ->
               Just (Assign (varName) aexp, tokens1)
             result -> Nothing
-
+parseStm (WhileTok:OpenParTok:tokens) 
+  
 parseStm _ = Nothing
 
 
