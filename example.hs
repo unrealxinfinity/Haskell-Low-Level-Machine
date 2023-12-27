@@ -336,9 +336,9 @@ parseStm [] = Nothing
 parseStm (IfTok:OpenParTok:tokens) = 
       case parseNot tokens of
         Just (bexp, CloseParTok:ThenTok:tokens1) ->
-          case getBranch tokens1 of
+          case buildData tokens1 of
             (stm1, tokens2) ->
-              case getBranch tokens2 of
+              case buildData tokens2 of
                 (stm2, tokens3) -> 
                   Just (Conditional (bexp) (stm1) (stm2), ColonTok:tokens3)
         
@@ -369,17 +369,19 @@ getBranch tokens =
         _ -> error "Error while getting branch"
           
 
-buildData :: [Token] -> Program
-buildData [] = []
+buildData :: [Token] -> Pair Program [Token]
+buildData [] = ([], [])
+buildData (ElseTok:tokens) = ([], tokens)
 buildData tokens = 
       case parseStm tokens of
           Just (stm, ColonTok:tokens1) -> 
-             stm:buildData tokens1
+             (stm:program, tokens2)
+             where (program, tokens2) = buildData tokens1
           _ -> error "Parse error"
 
 
 parse :: String -> Program
-parse programCode = buildData . lexer $ programCode
+parse programCode = first . buildData . lexer $ programCode
 
 -- To help you test your parser
 testParser :: String -> (String, String)
