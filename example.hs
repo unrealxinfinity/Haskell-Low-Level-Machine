@@ -166,7 +166,7 @@ run_tests _ = error "Please submit right input number"
 data Aexp = T | F | Var String | Const Integer | ADDexp Aexp Aexp | SUBexp Aexp Aexp | MULTexp Aexp Aexp deriving Show 
 
 data Bexp = BexpA Aexp | EQexp Bexp Bexp | LEQexp Bexp Bexp | ANDexp Bexp Bexp | NEGexp Bexp deriving Show
-data Stm = Assign Aexp Aexp | Lp Bexp Aexp | Conditional Bexp Program Program deriving Show
+data Stm = Assign Aexp Aexp | Lp Bexp Program | Conditional Bexp Program Program deriving Show
 type Program = [Stm]
 
 data Token = EqualTok | PlusTok | MinusTok | TimesTok | IneqTok | EqTok | NotTok | BoolEqTok | OpenParTok | CloseParTok | VarTok String | IntTok Integer | IfTok | ThenTok | ElseTok | ColonTok deriving Show
@@ -190,12 +190,13 @@ compB (ANDexp elem1 elem2) = compB elem2 ++ compB elem1 ++ [And]
 
 
 compile :: Program -> Code
-compile [] = [Noop]
+compile [] = []
 compile (Assign (Var var) aexp:program) = compA (aexp) ++ [Store var] ++ compile (program)
 compile (Conditional bexp stm1 stm2:program) = compB bexp ++ [Branch progCalculated progCalculated2] ++ compile (program)
    where 
     progCalculated = compile stm1
     progCalculated2 = compile stm2
+compile (Lp bexp prog:program) = [Loop (compB bexp) (compile prog)]
 stringToInt :: String -> Integer
 stringToInt = foldl (\acc chr->10*acc+ toInteger (digitToInt chr)) 0
 
