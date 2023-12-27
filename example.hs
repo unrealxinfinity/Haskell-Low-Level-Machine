@@ -201,6 +201,9 @@ stringToInt :: String -> Integer
 stringToInt = foldl (\acc chr->10*acc+ toInteger (digitToInt chr)) 0
 
 
+
+
+
 lexer :: String -> [Token]
 
 lexer [] = []
@@ -327,12 +330,24 @@ parseNot tokens =
   --    case parseNot tokens of
     --    Just (bexp, tokens1)
 
+
+
 isValidConditionFormat :: [Token] -> Int -> Bool
-isValidConditionFormat _ 2 = False
+isValidConditionFormat _ 0 = False
 isValidConditionFormat (ThenTok:_) _ = True
+isValidConditionFormat (ElseTok:_) _ = True
+isValidConditionFormat [] _ = True
 isValidConditionFormat (IntTok elem:tokens) (counter) = isValidConditionFormat tokens counter
 isValidConditionFormat (VarTok elem:tokens) (counter) = isValidConditionFormat tokens counter
-isValidConditionFormat (_:tokens) (counter) = isValidConditionFormat tokens (counter+1)
+isValidConditionFormat (_:tokens) (counter) = isValidConditionFormat tokens (counter-1)
+
+branchFormat :: [Token] -> Pair Program [Token]
+branchFormat (CloseParTok:_) = error "Bad Format of Conditional" 
+branchFormat tokens = 
+      case getBranch tokens 1 of
+        (stm, tokens1) -> (stm, tokens1)
+
+
 
 parseStm :: [Token] -> Maybe (Stm, [Token])
 
@@ -341,25 +356,29 @@ parseStm [] = Nothing
 parseStm (IfTok:OpenParTok:tokens) = 
       case parseNot tokens of
         Just (bexp, CloseParTok:ThenTok:tokens1) ->
-          case buildData tokens1 of
-            (stm1, tokens2) ->
-              case buildData tokens2 of
-                (stm2, tokens3) -> 
+          case branchFormat tokens1 of
+            (stm1, ElseTok:tokens2) ->
+              case branchFormat tokens2 of
+                (stm2, tokens3) ->
                   Just (Conditional (bexp) (stm1) (stm2), ColonTok:tokens3)
+            (stm1, tokens2) ->
+              Just (Conditional (bexp) (stm1) [], ColonTok:tokens2)
         
         result -> Nothing
 
 parseStm (IfTok:tokens)
-      | isValidConditionFormat (tokens) (0) == True =
-            case parseNot tokens of
-              Just (bexp, ThenTok:tokens1) ->
-                case buildData tokens1 of
-                  (stm1, tokens2) ->
-                    case buildData tokens2 of
-                      (stm2, tokens3) -> 
-                        Just (Conditional (bexp) (stm1) (stm2), ColonTok:tokens3)
+      | isValidConditionFormat (tokens) (2) == True =
+              case parseNot tokens of
+                Just (bexp, ThenTok:tokens1) ->
+                  case branchFormat tokens1 of
+                    (stm1, ElseTok:tokens2) ->
+                      case branchFormat tokens2 of
+                        (stm2, tokens3) ->
+                          Just (Conditional (bexp) (stm1) (stm2), ColonTok:tokens3)
+                    (stm1, tokens2) ->
+                      Just (Conditional (bexp) (stm1) [], ColonTok:tokens2)
               
-              result -> Nothing
+                result -> Nothing
         
 parseStm tokens = 
       case parseAexpType tokens of
@@ -371,24 +390,24 @@ parseStm tokens =
 
           result -> Nothing
 
---Just (Conditional (bexp) () ([Assign (Var "hello") (Const 4)]), tokens1)
 
 
-
-getBranch :: [Token] -> Pair Program [Token]
-getBranch [] = ([], [])
-getBranch (ElseTok:tokens) = ([], tokens)
-getBranch tokens =
+getBranch :: [Token] -> Int -> Pair Program [Token]
+getBranch (tokens) 0 = ([], tokens)
+getBranch [] _ = error "Error while making the condition"
+getBranch (CloseParTok:tokens) _ = ([], tokens)
+getBranch (OpenParTok:tokens) counter = getBranch tokens (-1)
+--getBranch (CloseParTok:tokens) = ([], CloseParTok:tokens)
+getBranch tokens counter =
       case parseStm tokens of
-        Just (stm1, ColonTok:tokens2) -> 
-          (stm1:branchProg, branchTok)
-          where (branchProg, branchTok) = getBranch tokens2
-        _ -> error "Error while getting branch"
+          Just (stm, ColonTok:tokens1) -> 
+             (stm:program, tokens2)
+             where (program, tokens2) = getBranch (tokens1) (counter-1)
+          _ -> error "Parse error"
           
 
 buildData :: [Token] -> Pair Program [Token]
 buildData [] = ([], [])
-buildData (ElseTok:tokens) = ([], tokens)
 buildData tokens = 
       case parseStm tokens of
           Just (stm, ColonTok:tokens1) -> 
@@ -398,7 +417,13 @@ buildData tokens =
 
 
 parse :: String -> Program
-parse programCode = first . buildData . lexer $ programCode
+parse programCode = 
+            let
+              (program, tokens) = buildData . lexer $ programCode
+            in 
+              if length tokens > 0 then
+                 error "Error Parsing Code"
+              else program
 
 -- To help you test your parser
 testParser :: String -> (String, String)
