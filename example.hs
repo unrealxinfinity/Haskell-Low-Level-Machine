@@ -86,9 +86,16 @@ run (Neg:code, TT:stack, state) = run (code, FF:stack, state)
 run (Neg:code, FF:stack, state) = run (code, TT:stack, state)
 
 -- Executes instruction Equ
-run (Equ:code, elem1:elem2:stack, state)
+run (Equ:code, Intgr elem1:Intgr elem2:stack, state)
         | elem1 == elem2 = run (code, TT:stack, state)
         | otherwise = run (code, FF:stack, state)
+
+run (Equ:code, TT:TT:stack, state) = run (code,TT:stack, state)
+run (Equ:code, TT:FF:stack, state) = run (code,FF:stack, state)
+run (Equ:code, FF:TT:stack, state) = run (code,FF:stack, state)
+run (Equ:code, FF:FF:stack, state) = run (code,TT:stack, state)
+
+
 
 -- Executes instruction Le
 run (Le:code, Intgr elem1:Intgr elem2:stack, state)
@@ -162,7 +169,7 @@ data Bexp = BexpA Aexp | EQexp Bexp Bexp | LEQexp Bexp Bexp | ANDexp Bexp Bexp |
 data Stm = Assign Aexp Aexp | Lp Bexp Aexp | Conditional Bexp Program Program deriving Show
 type Program = [Stm]
 
-data Token = EqualTok | PlusTok | MinusTok | TimesTok | OpenParTok | CloseParTok | VarTok String | IntTok Integer | IfTok | ThenTok | ElseTok | ColonTok deriving Show
+data Token = EqualTok | PlusTok | MinusTok | TimesTok | IneqTok | EqTok | NotTok | BoolEqTok | OpenParTok | CloseParTok | VarTok String | IntTok Integer | IfTok | ThenTok | ElseTok | ColonTok deriving Show
 
 
 compA :: Aexp -> Code
@@ -203,19 +210,26 @@ lexer ('+':restStr) = PlusTok:lexer restStr
 lexer ('-':restStr) = MinusTok:lexer restStr
 lexer ('*':restStr) = TimesTok:lexer restStr
 lexer (':':'=':restStr) = EqualTok:lexer restStr
+lexer ('<':'=':restStr) = IneqTok:lexer restStr
+lexer ('=':'=':restStr) = EqTok:lexer restStr
+lexer ('=':restStr) = BoolEqTok:lexer restStr
 lexer (';':restStr) = ColonTok:lexer restStr
 lexer ('(':restStr) = OpenParTok:lexer restStr
 lexer (')':restStr) = CloseParTok:lexer restStr
 lexer ('i':'f':restStr) = IfTok:lexer restStr
 lexer ('t':'h':'e':'n':restStr) = ThenTok:lexer restStr
 lexer ('e':'l':'s':'e':restStr) = ElseTok:lexer restStr
+lexer ('n':'o':'t':restStr) = NotTok:lexer restStr
+
 lexer str@(chr : _)
       | isDigit chr = IntTok (stringToInt digitStr) : lexer restStr
       where
         (digitStr, restStr) = break (not . isDigit) str
+
 lexer str@(chr : _)
       | isAlpha chr = VarTok varStr : lexer restStr
       where (varStr, restStr) = break (not . isAlpha) str
+
 lexer (chr : restStr) = error ("unexpected character: '" ++ show chr ++ "'")
 
 parseAexpType :: [Token] -> Maybe (Aexp, [Token])
@@ -236,16 +250,14 @@ parseAexpType (OpenParTok:tokens) =
 parseAexpType _ =
       Nothing
 
-{--parseBexp:: [Token] -> Maybe (Bexp,[Token])
-parseBexp (IntTok elem:restTok) = 
-  case parseBexp resTok of
-    Just (BexpA Const elem,[restTok])
-    Nothing ->Nothing
---}
 
-{--parseBexp (beforeTok:EqualTok:afterTok) =
-  case parseBexp beforeTok of
---}
+parseBexpType :: [Token] -> Maybe (Bexp, [Token])
+parseBexpType (tokens) =
+      case parseAexpType tokens of
+        Just (aexp, tokens1) ->
+          Just (BexpA aexp, tokens1)
+
+
 parseProdOrInt :: [Token] -> Maybe (Aexp, [Token])
 parseProdOrInt tokens =
       case parseAexpType tokens of 
@@ -275,8 +287,62 @@ parseSumOrSubOrProdOrInt tokens =
 
         result -> result
 
+parseIneq :: [Token] -> Maybe (Bexp, [Token])
+
+parseIneq tokens =
+      case parseBexpType tokens of 
+        Just (bexp1, IneqTok:tokens1) ->
+          case parseIneq tokens1 of
+            Just (bexp2, tokens2) ->
+              Just (LEQexp bexp1 bexp2, tokens2)
+            Nothing -> Nothing
+        result -> result
+
+parseEq :: [Token] -> Maybe (Bexp, [Token])
+parseEq tokens =
+      case parseIneq tokens of
+        Just (bexp1, EqTok:tokens1) ->
+          case parseEq tokens1 of 
+            Just (bexp2, tokens2) ->
+              Just (EQexp bexp1 bexp2, tokens2)
+            Nothing -> Nothing
+        result -> result
+
+parseNot :: [Token] -> Maybe (Bexp, [Token])
+parseNot (NotTok:tokens) =
+      case parseNot tokens of
+        Just (bexp, tokens1) ->
+          Just (NEGexp bexp, tokens1)
+        Nothing -> Nothing
+
+
+parseNot tokens = 
+      case parseEq tokens of
+        Just (bexp, tokens1) -> Just (bexp, tokens1)
+        --Nothing -> Nothing
+
+--parseBoolEq :: [Token] -> Maybe (Bexp, [Token])
+--parseBoolEq tokens =
+  --    case parseNot tokens of
+    --    Just (bexp, tokens1)
+
+
+
 parseStm :: [Token] -> Maybe (Stm, [Token])
+
 parseStm [] = Nothing
+
+parseStm (IfTok:OpenParTok:tokens) = 
+      case parseNot tokens of
+        Just (bexp, CloseParTok:ThenTok:tokens1) ->
+          case getBranch tokens1 of
+            (stm1, tokens2) ->
+              case getBranch tokens2 of
+                (stm2, tokens3) -> 
+                  Just (Conditional (bexp) (stm1) (stm2), ColonTok:tokens3)
+        
+        result -> Nothing
+        
 parseStm tokens = 
       case parseAexpType tokens of
           Just (Var varName, EqualTok:tokens1) ->
@@ -287,23 +353,27 @@ parseStm tokens =
 
           result -> Nothing
 
-{--parseStm (IfTok:OpenParTok:tokens) = 
-      case parseBexp tokens of
-          Just (Var varName, EqualTok:tokens1) ->
-            case ? tokens1 of
-              Just (aexp, tokens2) ->
-                Just (Assign (Var varName) aexp, tokens2)
-              Nothing -> Nothing
+--Just (Conditional (bexp) () ([Assign (Var "hello") (Const 4)]), tokens1)
 
-          result -> Nothing
---}
 
+
+getBranch :: [Token] -> Pair Program [Token]
+getBranch [] = ([], [])
+getBranch (ElseTok:tokens) = ([], tokens)
+getBranch tokens =
+      case parseStm tokens of
+        Just (stm1, ColonTok:tokens2) -> 
+          (stm1:branchProg, branchTok)
+          where (branchProg, branchTok) = getBranch tokens2
+        _ -> error "Error while getting branch"
+          
 
 buildData :: [Token] -> Program
 buildData [] = []
 buildData tokens = 
       case parseStm tokens of
-          Just (stm, ColonTok:tokens1) -> [stm] ++ buildData tokens1
+          Just (stm, ColonTok:tokens1) -> 
+             stm:buildData tokens1
           _ -> error "Parse error"
 
 
