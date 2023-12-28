@@ -6,10 +6,10 @@ import Interpreter
 data Aexp = T | F | Var String | Const Integer | ADDexp Aexp Aexp | SUBexp Aexp Aexp | MULTexp Aexp Aexp deriving Show 
 
 data Bexp = BexpA Aexp | EQexp Bexp Bexp | BoolEQexp Bexp Bexp | LEQexp Bexp Bexp | ANDexp Bexp Bexp | NEGexp Bexp deriving Show
-data Stm = Assign String Aexp | Lp Bexp Program | Conditional Bexp Program Program deriving Show
+data Stm = Assign String Aexp | Lp Bexp Program | Conditional Bexp Program Program | Print Bexp deriving Show
 type Program = [Stm]
 
-data Token = EqualTok | PlusTok | MinusTok | TimesTok | IneqTok | EqTok | NotTok | BoolEqTok | AndTok | OpenParTok | CloseParTok | TrueTok | FalseTok | VarTok String | IntTok Integer | IfTok | ThenTok | ElseTok | ColonTok deriving Show
+
 
 
 isBooleanEQ :: Bexp -> Bool
@@ -18,6 +18,11 @@ isBooleanEQ (BexpA F) = True
 isBooleanEQ (BexpA _) = False
 isBooleanEQ _ = True
 
+compDoubleSubtraction :: Aexp -> Code
+compDoubleSubtraction (SUBexp elem1 (SUBexp elem2 elem3)) = compDoubleSubtraction (SUBexp elem2 elem3) ++ compA elem1 ++ [Add]
+compDoubleSubtraction (SUBexp elem1 elem2) = compA elem2 ++ compA elem1 ++ [Add]
+compDoubleSubtraction _ = error "Error while doing double subtraction"
+
 
 compA :: Aexp -> Code
 compA T = [Tru]
@@ -25,6 +30,7 @@ compA F = [Fals]
 compA (Var var) = [Fetch var]
 compA (Const const) = [Push const]
 compA (ADDexp elem1 elem2) = compA elem2 ++ compA elem1 ++ [Add]
+compA (SUBexp elem1 (SUBexp elem2 elem3)) = compDoubleSubtraction (SUBexp elem2 elem3) ++ compA elem1 ++ [Sub]
 compA (SUBexp elem1 elem2) = compA elem2 ++ compA elem1 ++ [Sub]
 compA (MULTexp elem1 elem2) = compA elem2 ++ compA elem1 ++ [Mult]
 

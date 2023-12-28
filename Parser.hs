@@ -2,7 +2,10 @@ module Parser where
 
 import Compiler
 import Interpreter
-import Data.Char (isSpace, isDigit, digitToInt, isAlpha)
+import Data.Char (isSpace, isDigit, digitToInt, isAlpha, isUpper)
+
+
+data Token = EqualTok | PlusTok | MinusTok | TimesTok | IneqTok | EqTok | NotTok | BoolEqTok | AndTok | OpenParTok | CloseParTok | TrueTok | FalseTok | VarTok String | IntTok Integer | IfTok | ThenTok | ElseTok | ColonTok deriving Show
 
 
 stringToInt :: String -> Integer
@@ -39,7 +42,7 @@ lexer str@(chr : _)
         (digitStr, restStr) = break (not . isDigit) str
 
 lexer str@(chr : _)
-      | isAlpha chr = VarTok varStr : lexer restStr
+      | isAlpha chr && not (isUpper chr) = VarTok varStr : lexer restStr
       where (varStr, restStr) = break (not . isAlpha) str
 
 lexer (chr : restStr) = error ("unexpected character: '" ++ show chr ++ "'")
@@ -85,7 +88,7 @@ parseBexpType (OpenParTok:tokens) =
 
 
 parseBexpType (tokens) =
-      case parseAexpType tokens of
+      case parseSumOrSubOrProdOrInt tokens of
         Just (aexp, tokens1) ->
           Just (BexpA aexp, tokens1)
         Nothing -> Nothing
@@ -206,6 +209,8 @@ parseStm (IfTok:OpenParTok:tokens) =
           case branchFormat tokens1 of
             (stm1, ElseTok:tokens2) ->
               case branchFormat tokens2 of
+                (stm2, ColonTok:tokens3) ->
+                  Just (Conditional (bexp) (stm1) (stm2), ColonTok:tokens3)
                 (stm2, tokens3) ->
                   Just (Conditional (bexp) (stm1) (stm2), ColonTok:tokens3)
             (stm1, tokens2) ->
@@ -214,12 +219,14 @@ parseStm (IfTok:OpenParTok:tokens) =
         result -> Nothing
 
 parseStm (IfTok:tokens)
-      | isValidConditionFormat (tokens) (2) == True =
+      | isValidConditionFormat (tokens) (2) =
               case parseAndOrBoolEqOrNotOrEqOrIneq tokens of
                 Just (bexp, ThenTok:tokens1) ->
                   case branchFormat tokens1 of
                     (stm1, ElseTok:tokens2) ->
                       case branchFormat tokens2 of
+                        (stm2, ColonTok:tokens3) ->
+                          Just (Conditional (bexp) (stm1) (stm2), ColonTok:tokens3)
                         (stm2, tokens3) ->
                           Just (Conditional (bexp) (stm1) (stm2), ColonTok:tokens3)
                     (stm1, tokens2) ->
@@ -242,6 +249,7 @@ getBranch :: [Token] -> Int -> Pair Program [Token]
 getBranch (tokens) 0 = ([], tokens)
 getBranch [] _ = error "Error while making the condition"
 getBranch (CloseParTok:tokens) _ = ([], tokens)
+getBranch (OpenParTok:OpenParTok:tokens) counter = error "Error while opening parenthesis"
 getBranch (OpenParTok:tokens) counter = getBranch tokens (-1)
 getBranch tokens counter =
       case parseStm tokens of
