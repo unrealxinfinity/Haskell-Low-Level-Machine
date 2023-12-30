@@ -42,11 +42,15 @@ We divided expressions into 2 types:
 - Boolean expressions - This is represented By Bexp which constructors like **"BexpA Aexp | EQexp Bexp Bexp | BoolEQexp Bexp Bexp | LEQexp Bexp Bexp | ANDexp Bexp Bexp | NEGexp Bexp"** where BexpA represents a base expression that represents a Aexp and the rest are recursive data. 
 This way we can define recursive functions to parse through each of the data defined and convert them into instructions.
 
-We also defined 4 types of statement ,"Assign String Aexp | Lp Bexp Program | Conditional Bexp Program Program | Print Bexp":
+We also defined different types of statement ,**"Assign String Aexp | While Bexp Program | For Stm Bexp Stm Program | Conditional Bexp Program Program | Print [Bexp] | Function String [String] Program | Return Bexp"**:
 - **"Assign String Aexp"** - This is the assignment statement, which corresponds to "variable:=expression". It takes a string as assigning variable and Aexp as the right side of the operation that can be recursively parsed.
-- **"Lp Bexp Program"** - This represents the loop statement, "while do". It takes a boolean expression in the left side and the List of statements (Program) in the right side.
+- **"While Bexp Program"** - This represents the loop statement, "while do". It takes a boolean expression in the left side and the List of statements (Program) in the right side.
 - **"Conditional Bexp Program Program"** - This is the conditional statement,"if then else". This takes a boolean expression and 2 lists of statements so we can construct then "then" and "else" part, representing if-booleanExpression-then-Program-else-Program.
-- **"Pring Bexp"** - Helper data used to pring boolean expression.  ###### **Nao tenho a certeza**
+
+Extras:
+- **"Print Bexp"** - Helper data used to pring boolean expression.  ###### **Nao tenho a certeza**
+- **"Function String [String] Program"** - Data used to simulate function definition
+- **"Return Bexp"** - Data used to simulate return.
 
 To achieve compiling, we used pattern matching that would execute each case according to the type of expression or statement.
 
@@ -65,7 +69,7 @@ The parser turns code in string into tokens that are processed into data we defi
 
 The first step was to convert code string into tokens
 We defined tokens for the given operations defined in TP2 specifications:
-- **"EqualTok | PlusTok | MinusTok | TimesTok | IneqTok | EqTok | NotTok | BoolEqTok | AndTok | OpenParTok | CloseParTok | TrueTok | FalseTok | VarTok String | IntTok Integer | IfTok | ThenTok | ElseTok | ColonTok | WhileTok | DoTok | ForTok | PrintTok | FuncTok | RetTok | QuoteTok | CommaTok"**
+- **"EqualTok | PlusTok | TimesTok | IneqTok | EqTok | NotTok | BoolEqTok | AndTok | OpenParTok | CloseParTok | TrueTok | FalseTok | VarTok String | IntTok Integer | IfTok | ThenTok | ElseTok | ColonTok | WhileTok | DoTok | ForTok | PrintTok | FuncTok | RetTok | QuoteTok | CommaTok"**
     - EqualTok represents the string ":=", for assignment;
     - PlusTok represents the string "+",for arithmetic expressions;
     - TimesTok represents the string "**" for arithmetic expressions;
@@ -123,6 +127,8 @@ With this tree, we can call **"compile"** to compile it into a instruction list.
 
 We also added the functionality to read the input string from a file so we can simulate the coding experience.
 
+The code for these extra features is located in the Extra.hs file and there are some helper functions located in the Parser file as well that would help just for the compilation of the file code.
+
 By running the commands "make clean", followed by "make" on the same directory as the makefile, you will be able to generate an executable, which you can run by "./{Name of executable} {name of file in .txt format}". It is required to create a .txt file first to pass as argument to the compilation of the code. You can also use the command "make run FILE={name of file}" to run it.
 
 In the file we take use of more features including for loops, print functions and user defined functions:
@@ -134,6 +140,4 @@ In the file we take use of more features including for loops, print functions an
 
 - **User Defined Functions** - To use user defined functions you first need to define a function by writing the following "function {name of function} ({function arguments})do({function statements})". To call this function you can simply use {function name}({function arguments}) in regular expressions. For now functions will return using the return statement and the function calls will be replaced with that return statement value inside the function. Take note that inside a function it is local so you can't have access to other outside variables except the ones given by arguments. You can also define functions inside functions that will be only available inside the respective function.
 
-### Extra 
 
-The code for these extra features is located in the Extra.hs file and there are some helper functions located in the Parser file as well that would help just for the compilation of the file code.
