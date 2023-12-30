@@ -69,7 +69,7 @@ The parser turns code in string into tokens that are processed into data we defi
 
 The first step was to convert code string into tokens
 We defined tokens for the given operations defined in TP2 specifications:
-- **"EqualTok | PlusTok | MinusTok | TimesTok | IneqTok | EqTok | NotTok | BoolEqTok | AndTok | OpenParTok | CloseParTok | TrueTok | FalseTok | VarTok String | IntTok Integer | IfTok | ThenTok | ElseTok | ColonTok | WhileTok | DoTok"**
+- **"EqualTok | PlusTok | MinusTok | TimesTok | IneqTok | EqTok | NotTok | BoolEqTok | AndTok | OpenParTok | CloseParTok | TrueTok | FalseTok | VarTok String | IntTok Integer | IfTok | ThenTok | ElseTok | ColonTok | WhileTok | DoTok | ForTok | PrintTok | FuncTok | RetTok | FuncCallTok | QuoteTok | CommaTok"**
     - EqualTok represents the string ":=", for assignment;
     - PlusTok represents the string "+",for arithmetic expressions;
     - MinusTok represents the string "-" for arithmetic expressions;
@@ -91,6 +91,12 @@ We defined tokens for the given operations defined in TP2 specifications:
     - ColonTok represents the string ";", to enclose a statement;
     - WhileTok represents the keyword "while", for loops;
     - DoTok represents the keyword "do", for loops.
+    - ForTok represents the keyword "for";
+    - PrintTok represents the keyword "print";
+    - FuncTok represents the keyword "function" to declare functions;
+    - RetTok represents the keyword "return" for function return;
+    - CommaTok represents ",";
+    - QuoteTok represents the escaped quote "\'";
 
 To achieve the conversion , we used the function **"lexer"**:
 - **"lexer :: String -> [Token]"** - This function uses pattern matching to verify if any of the above stated strings occured in the input string, if so then converts the keywords and special symbols into tokens stated above. Moreover, to ensure multiple digits are taken into consideration, the lexer function separates the numbers of the rest first by using **"break"** on the input string until a character is not digit. Also to distinguish keyword from variables, the mattern matching partakes in this differenciation and uses the same technique used by numbers to ensure multiple characters are considered for the variable,breaking on the character that is not alphabet.
