@@ -2,6 +2,7 @@ module Main where
 
 import Parser
 import Interpreter
+import Extra
 import System.IO
 import System.Environment (getArgs)
 
@@ -12,6 +13,6 @@ main = do
     case args of
         [filename] -> do
             fileContent <- readFile filename
-            case testParser fileContent of
-                (stack, state) -> putStrLn (show state)
+            case testParserFile fileContent of
+                printData -> putStrLn printData
         _ -> putStrLn "Usage: programName filename"

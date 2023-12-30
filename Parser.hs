@@ -5,7 +5,7 @@ import Interpreter
 import Data.Char (isSpace, isDigit, digitToInt, isAlpha, isUpper)
 
 
-data Token = EqualTok | PlusTok | MinusTok | TimesTok | IneqTok | EqTok | NotTok | BoolEqTok | AndTok | OpenParTok | CloseParTok | TrueTok | FalseTok | VarTok String | IntTok Integer | IfTok | ThenTok | ElseTok | ColonTok | WhileTok | DoTok deriving Show
+data Token = EqualTok | PlusTok | MinusTok | TimesTok | IneqTok | EqTok | NotTok | BoolEqTok | AndTok | OpenParTok | CloseParTok | TrueTok | FalseTok | VarTok String | IntTok Integer | IfTok | ThenTok | ElseTok | ColonTok | WhileTok | DoTok | ForTok | PrintTok | FuncTok | RetTok | FuncCallTok | QuoteTok | CommaTok deriving Show
 
 
 stringToInt :: String -> Integer
@@ -19,7 +19,7 @@ lexer [] = []
 lexer (chr:restStr)
       | isSpace chr = lexer restStr
 lexer ('+':restStr) = PlusTok:lexer restStr
-lexer ('-':restStr) = MinusTok:lexer restStr
+lexer ('-':restStr) = PlusTok:IntTok (-1):TimesTok:lexer restStr
 lexer ('*':restStr) = TimesTok:lexer restStr
 lexer (':':'=':restStr) = EqualTok:lexer restStr
 lexer ('<':'=':restStr) = IneqTok:lexer restStr
@@ -36,12 +36,23 @@ lexer ('n':'o':'t':restStr) = NotTok:lexer restStr
 lexer ('T':'r':'u':'e':restStr) = TrueTok:lexer restStr
 lexer ('F':'a':'l':'s':'e':restStr) = FalseTok:lexer restStr
 lexer ('w':'h':'i':'l':'e':restStr) = WhileTok:lexer restStr
+lexer ('f':'o':'r':restStr) = ForTok:lexer restStr
 lexer ('d':'o':restStr) = DoTok:lexer restStr
+lexer ('p':'r':'i':'n':'t':'(':restStr) = PrintTok:lexer restStr
+lexer ('f':'u':'n':'c':'t':'i':'o':'n':' ':restStr) = FuncTok:lexer restStr
+lexer ('r':'e':'t':'u':'r':'n':restStr) = RetTok:lexer restStr
+lexer (',':restStr) = CommaTok:lexer restStr
+lexer ('\'':restStr) = QuoteTok:lexer ('§':restStr)
 
 lexer str@(chr : _)
       | isDigit chr = IntTok (stringToInt digitStr) : lexer restStr
       where
         (digitStr, restStr) = break (not . isDigit) str
+
+
+lexer str@('§': _) = VarTok varStr : QuoteTok : lexer restStr
+      where ('§':varStr, '\'':restStr) = break (=='\'') str
+
 
 lexer str@(chr : _)
       | isAlpha chr && not (isUpper chr) = VarTok varStr : lexer restStr
@@ -59,6 +70,11 @@ parseAexpType (FalseTok:tokens) =
 
 parseAexpType (IntTok elem:tokens) =
       Just (Const elem, tokens)
+
+parseAexpType (VarTok elem:OpenParTok:tokens) =
+      case getPrintVariables tokens of
+        (bexp, tokens1) ->
+          Just (FuncCall elem bexp, tokens1)
 
 parseAexpType (VarTok elem:tokens) =
       Just (Var elem, tokens)
@@ -116,12 +132,6 @@ parseSumOrSubOrProdOrInt tokens =
           case parseSumOrSubOrProdOrInt tokens1 of
             Just(aexp2, tokens2) ->
               Just (ADDexp aexp1 aexp2, tokens2)
-            Nothing -> Nothing
-
-        Just (aexp1, MinusTok:tokens1) ->
-          case parseSumOrSubOrProdOrInt tokens1 of
-            Just(aexp2, tokens2) ->
-              Just(SUBexp aexp1 aexp2, tokens2)
             Nothing -> Nothing
 
         result -> result
@@ -248,9 +258,9 @@ parseStm (WhileTok:OpenParTok:tokens) =
               Just (bexp, CloseParTok:DoTok:tokens1) ->
                 case branchFormat tokens1 of
                   (stm1, ColonTok:tokens2) ->
-                    Just (Lp (bexp) (stm1), ColonTok:tokens2)
+                    Just (While (bexp) (stm1), ColonTok:tokens2)
                   (stm1, tokens2) ->
-                    Just (Lp (bexp) (stm1), ColonTok:tokens2)
+                    Just (While (bexp) (stm1), ColonTok:tokens2)
               result -> Nothing
 
 parseStm (WhileTok:tokens) 
@@ -259,13 +269,64 @@ parseStm (WhileTok:tokens)
       Just (bexp,DoTok:tokens1) ->
         case branchFormat tokens1 of
           (stm1, ColonTok:tokens2) ->
-              Just (Lp (bexp) (stm1), ColonTok:tokens2)
+              Just (While (bexp) (stm1), ColonTok:tokens2)
           (stm1, tokens2) ->
-              Just (Lp (bexp) (stm1), ColonTok:tokens2)
+              Just (While (bexp) (stm1), ColonTok:tokens2)
       result -> error "parse error"
+
+parseStm (ForTok:OpenParTok:tokens) = 
+      case parseStm tokens of
+        Just (Assign var aexp, ColonTok:tokens1) -> 
+          case parseAndOrBoolEqOrNotOrEqOrIneq tokens1 of 
+            Just (bexp, ColonTok:tokens2) ->
+              case parseStm tokens2 of
+                Just (Assign var1 aexp1, CloseParTok:DoTok:tokens3) ->
+                  case branchFormat tokens3 of
+                    (stm, tokens4) ->
+                      Just (For (Assign var aexp) (bexp) (Assign var1 aexp1) (stm), ColonTok:tokens4)
+                _ -> Nothing
+            _ -> Nothing
+        result -> Nothing
+
+parseStm (PrintTok:tokens) =
+      case getPrintVariables tokens of
+        (bexp, ColonTok:tokens1) ->
+          Just (Print bexp, ColonTok:tokens1)
+        _ -> Nothing
+
+parseStm (FuncTok:VarTok funcName:OpenParTok:tokens) =
+      case getFunctionParam tokens of
+        (param, DoTok:tokens1) ->
+          case branchFormat tokens1 of
+            (stm, tokens2) ->
+              Just (Function funcName param stm, ColonTok:tokens2)
+        _ -> Nothing
+
+parseStm (RetTok:tokens) =
+      case parseSumOrSubOrProdOrInt tokens of
+            Just (aexp, ColonTok:tokens1) ->
+              Just (Return (BexpA aexp), ColonTok:tokens1)
+            _ -> 
+              case parseAndOrBoolEqOrNotOrEqOrIneq tokens of
+                Just (bexp, ColonTok:tokens1) ->
+                  Just (Return bexp, ColonTok:tokens1)
+                _ -> Nothing
+          
 
 parseStm _ = Nothing
 
+
+getFunctionParam :: [Token] -> Pair [String] [Token]
+
+getFunctionParam (CloseParTok:tokens) = ([], tokens)
+
+getFunctionParam (VarTok varName:CloseParTok:tokens) = ([varName], tokens)
+
+getFunctionParam (VarTok varName:CommaTok:tokens) =
+        case getFunctionParam tokens of
+          (str, tokens1) -> (varName:str, tokens1)
+
+getFunctionParam _ = error "Error while getting function parameters"
 
 
 
@@ -307,6 +368,11 @@ testParser :: String -> (String, String)
 testParser programCode = (stack2Str stack, state2Str state)
   where (_,stack,state) = run(compile (parse programCode), createEmptyStack, createEmptyState)
 
+
+
+
+
+
 -- Examples:
 -- testParser "x := 5; x := x - 1;" == ("","x=4")
 -- testParser "if (not True and 2 <= 5 = 3 == 4) then x :=1; else y := 2;" == ("","y=2")
@@ -315,3 +381,45 @@ testParser programCode = (stack2Str stack, state2Str state)
 -- testParser "x := 42; if x <= 43 then x := 1; else x := 33; x := x+1; z := x+x;" == ("","x=2,z=4")
 -- testParser "x := 2; y := (x - 3)*(4 + 2*3); z := x +x*(2);" == ("","x=2,y=-10,z=6")
 -- testParser "i := 10; fact := 1; while (not(i == 1)) do (fact := fact * i; i := i - 1;);" == ("","fact=3628800,i=1") --}
+
+
+
+
+
+
+
+
+getPrintVariables :: [Token] -> Pair [Bexp] [Token]
+
+getPrintVariables (CloseParTok:tokens) = ([], tokens)
+
+getPrintVariables (QuoteTok:VarTok varName:QuoteTok:CommaTok:tokens) =
+        case getPrintVariables tokens of
+          (bexp, tokens1) ->
+            ((BexpA (PrintStr varName)):bexp, tokens1)
+
+getPrintVariables (QuoteTok:VarTok varName:QuoteTok:CloseParTok:tokens) = ([BexpA (PrintStr varName)], tokens)
+
+getPrintVariables (elem:tokens) =
+          case parseSumOrSubOrProdOrInt (elem:tokens) of
+            Just (aexp, CommaTok:tokens1) ->
+              case getPrintVariables tokens1 of
+                (bexp, tokens2) ->
+                  (BexpA aexp:bexp, tokens2)
+            Just (aexp, CloseParTok:tokens1) ->
+              ([BexpA aexp], tokens1)
+
+            _ -> 
+              case parseAndOrBoolEqOrNotOrEqOrIneq (elem:tokens) of
+                Just (bexp, CommaTok:tokens1) ->
+                  case getPrintVariables tokens1 of
+                    (bexp1, tokens2) ->
+                      (bexp:bexp1, tokens2)
+                Just (bexp, CloseParTok:tokens1) ->
+                  ([bexp], tokens1)
+                _ -> error "Error while getting print variable"
+
+
+
+getPrintVariables _ = error "Error while getting print variables"
+

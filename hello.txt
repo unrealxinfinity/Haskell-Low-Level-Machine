@@ -1,4 +1,0 @@
-hello := 3;
-if(hello == 3)then(
-    hello := 4;
-)
