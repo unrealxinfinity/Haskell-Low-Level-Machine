@@ -112,3 +112,6 @@ We used the function **"parse"** so we could join the job of **"buildData"** and
 In the end, we will obtain a tree with all the statements with their respective expressions and priorities defined, Where the topmost element of the tree executes first and the leaves execute the last.
 
 With this tree, we can call **"compile"** to compile it into a instruction list.
+
+We also added the functionality to read the input string from a file so we can simulate the coding experience.
+
