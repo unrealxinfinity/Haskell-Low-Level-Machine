@@ -53,6 +53,6 @@ compile (Conditional bexp stm1 stm2:program) = compB bexp ++ [Branch progCalcula
    where 
     progCalculated = compile stm1
     progCalculated2 = compile stm2
-compile (Lp bexp prog:program) = [Loop (compB bexp) (compile prog)]
+compile (Lp bexp prog:program) = [Loop (compB bexp) (compile prog)] ++ compile program
 
 
