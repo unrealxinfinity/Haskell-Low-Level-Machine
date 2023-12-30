@@ -5,7 +5,7 @@ import Interpreter
 import Data.Char (isSpace, isDigit, digitToInt, isAlpha, isUpper)
 
 
-data Token = EqualTok | PlusTok | MinusTok | TimesTok | IneqTok | EqTok | NotTok | BoolEqTok | AndTok | OpenParTok | CloseParTok | TrueTok | FalseTok | VarTok String | IntTok Integer | IfTok | ThenTok | ElseTok | ColonTok | WhileTok | DoTok | ForTok | PrintTok | FuncTok | RetTok | FuncCallTok | QuoteTok | CommaTok deriving Show
+data Token = EqualTok | PlusTok | TimesTok | IneqTok | EqTok | NotTok | BoolEqTok | AndTok | OpenParTok | CloseParTok | TrueTok | FalseTok | VarTok String | IntTok Integer | IfTok | ThenTok | ElseTok | ColonTok | WhileTok | DoTok | ForTok | PrintTok | FuncTok | RetTok | QuoteTok | CommaTok deriving Show
 
 
 stringToInt :: String -> Integer

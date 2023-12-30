@@ -65,10 +65,9 @@ The parser turns code in string into tokens that are processed into data we defi
 
 The first step was to convert code string into tokens
 We defined tokens for the given operations defined in TP2 specifications:
-- **"EqualTok | PlusTok | MinusTok | TimesTok | IneqTok | EqTok | NotTok | BoolEqTok | AndTok | OpenParTok | CloseParTok | TrueTok | FalseTok | VarTok String | IntTok Integer | IfTok | ThenTok | ElseTok | ColonTok | WhileTok | DoTok"**
+- **"EqualTok | PlusTok | MinusTok | TimesTok | IneqTok | EqTok | NotTok | BoolEqTok | AndTok | OpenParTok | CloseParTok | TrueTok | FalseTok | VarTok String | IntTok Integer | IfTok | ThenTok | ElseTok | ColonTok | WhileTok | DoTok | ForTok | PrintTok | FuncTok | RetTok | QuoteTok | CommaTok"**
     - EqualTok represents the string ":=", for assignment;
     - PlusTok represents the string "+",for arithmetic expressions;
-    - MinusTok represents the string "-" for arithmetic expressions;
     - TimesTok represents the string "**" for arithmetic expressions;
     - IneqTok represents the string "<=", for integer inequality;
     - EqTok represents the string "==", for integer equality;
@@ -85,8 +84,14 @@ We defined tokens for the given operations defined in TP2 specifications:
     - ThenTok represents the keyword "then", for conditional;
     - ElseTok represents the keyword "else", for condtional;
     - ColonTok represents the string ";", to enclose a statement;
-    - WhileTok represents the keyword "while", for loops;
+    - WhileTok represents the keyword "while", for while loops;
     - DoTok represents the keyword "do", for loops.
+    - ForTok represents the keyword "for", for for loops;
+    - PrintTok represents the keyword "print" and "(", for print functions instance;
+    - FuncTok represents the keyword for "function ", for functions definitions;
+    - RetTok represents the keyword for "return", for function return values;
+    - QuoteTok represents the string "\"", for use of strings inside a print functions;
+    - CommaTok represents the string ",", for seperating function parameters or print statements;
 
 To achieve the conversion , we used the function **"lexer"**:
 - **"lexer :: String -> [Token]"** - This function uses pattern matching to verify if any of the above stated strings occured in the input string, if so then converts the keywords and special symbols into tokens stated above. Moreover, to ensure multiple digits are taken into consideration, the lexer function separates the numbers of the rest first by using **"break"** on the input string until a character is not digit. Also to distinguish keyword from variables, the mattern matching partakes in this differenciation and uses the same technique used by numbers to ensure multiple characters are considered for the variable,breaking on the character that is not alphabet.
@@ -94,7 +99,7 @@ To achieve the conversion , we used the function **"lexer"**:
 After converting the input string into tokens, we used the function **"buildData"** to convert it into a tree of data structures we defined for the compiler:
 - **"buildData :: [Token] -> Pair Program [Token]"** - This function is a higher order funtion that parses through the list of tokens and converts then into data structures we defined for the compiler. The strategy was to use pattern matching during the recursive call of sub functions until a certain result was achieved,for example, when we parse through all the statements and reach the ";", so we extract the result and the return value from the sub fuction. This strategy was used on the sub functions aswell. Most of these sub functions were defined in a call chain that prioritized certain operations defined in TP2 specifications in order to construct the data tree according to those priorities.
     Those sub functions include:
-    - **"parseStm :: [Token] -> Maybe (Stm, [Token])"** - This function parses through the list of tokens and returns the data tree for compiler according to the tokens for assignment, conditional and looping code. It returns a Maybe of Just (Stm,[Token]) or Nothing in case no match is found (parse errors). This function calls lower order functions that generate subtrees for the expressions data we defined for the compiler according to their priorities, or subtrees for statements, distinguishing them by using functions **"branchFormat :: [Token] -> Pair Program [Token]" and "getBranch :: [Token] -> Int -> Pair Program [Token]"**. ###### **Nao tenho a certeza**
+    - **"parseStm :: [Token] -> Maybe (Stm, [Token])"** - This function parses through the list of tokens and returns the data tree for compiler according to the tokens for assignment, conditional, looping code and function calls or definitions. It returns a Maybe of Just (Stm,[Token]) or Nothing in case no match is found (parse errors). This function calls lower order functions that generate subtrees for the expressions data we defined for the compiler according to their priorities, or subtrees for statements, distinguishing them by using functions **"branchFormat :: [Token] -> Pair Program [Token]" and "getBranch :: [Token] -> Int -> Pair Program [Token]"**. ###### **Nao tenho a certeza**
         - **"isValidConditionFormat :: [Token] -> Int -> Bool"** - This function verifies if the syntax is correct for conditional and loop operations with keywords;
         The following chain of functions parse the tokens related to boolean expressions and construct the data tree with priority of operatiors in the order specified in the TP2 specification. Higher the order of the function, the more priority it is executed with (being the first to execute): 
         - **"parseAndOrBoolEqOrNotOrEqOrIneq :: [Token] -> Maybe (Bexp, [Token])"** - This functions parses the tokens related to AND boolean expressions and adds **ANDexp bexp bexp1"** to the tree;
@@ -113,5 +118,22 @@ In the end, we will obtain a tree with all the statements with their respective 
 
 With this tree, we can call **"compile"** to compile it into a instruction list.
 
+
+## Extra
+
 We also added the functionality to read the input string from a file so we can simulate the coding experience.
 
+By running the commands "make clean", followed by "make" on the same directory as the makefile, you will be able to generate an executable, which you can run by "./{Name of executable} {name of file in .txt format}". It is required to create a .txt file first to pass as argument to the compilation of the code. You can also use the command "make run FILE={name of file}" to run it.
+
+In the file we take use of more features including for loops, print functions and user defined functions:
+
+
+- **For loop** - to use a for loop you can write "for({Assign statement}; {boolean expression}; {Assign statement}) do ({statements to execute inside for loop if boolean expression is true})". The for loop is similar to a while loop except that you can define a new variable at the start and have an automatic counter at the end of each loop, making it more practical;
+
+- **Print Function** - to use the print function simply write "print({print arguments})". The only way to receive feedback from the file is by using the print function. The print arguments can be boolean expressions, in which case will print True or False to the terminal, arithmetic expression, in which case will print a number to the terminal or a static string by using "'" you can write a static string to the terminal and if you include a "\n" inside that string it will print a new line. You can write more then one argument in the print function. To seperate each argument you have to use the string ",". Of course print functions are a statement so you have to end the print with ";";
+
+- **User Defined Functions** - To use user defined functions you first need to define a function by writing the following "function {name of function} ({function arguments})do({function statements})". To call this function you can simply use {function name}({function arguments}) in regular expressions. For now functions will return using the return statement and the function calls will be replaced with that return statement value inside the function. Take note that inside a function it is local so you can't have access to other outside variables except the ones given by arguments. You can also define functions inside functions that will be only available inside the respective function.
+
+### Extra 
+
+The code for these extra features is located in the Extra.hs file and there are some helper functions located in the Parser file as well that would help just for the compilation of the file code.

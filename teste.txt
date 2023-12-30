@@ -5,7 +5,7 @@ function addFive (num) do(
     return addThree (num) +2;
 )
 
-print(addThree(2));
+print(addFive(2));
 
 
 
