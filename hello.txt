@@ -1,4 +1,5 @@
 hello := 3;
-if(hello == 3)then(
+while (hello == 3)
+do (
     hello := 4;
 )
