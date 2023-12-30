@@ -3,6 +3,8 @@
 
 -- Part 1
 
+module Interpreter where
+
 import Data.List
 import qualified Data.Map as Map
 
@@ -85,9 +87,16 @@ run (Neg:code, TT:stack, state) = run (code, FF:stack, state)
 run (Neg:code, FF:stack, state) = run (code, TT:stack, state)
 
 -- Executes instruction Equ
-run (Equ:code, elem1:elem2:stack, state)
+run (Equ:code, Intgr elem1:Intgr elem2:stack, state)
         | elem1 == elem2 = run (code, TT:stack, state)
         | otherwise = run (code, FF:stack, state)
+
+run (Equ:code, TT:TT:stack, state) = run (code,TT:stack, state)
+run (Equ:code, TT:FF:stack, state) = run (code,FF:stack, state)
+run (Equ:code, FF:TT:stack, state) = run (code,FF:stack, state)
+run (Equ:code, FF:FF:stack, state) = run (code,TT:stack, state)
+
+
 
 -- Executes instruction Le
 run (Le:code, Intgr elem1:Intgr elem2:stack, state)
@@ -153,45 +162,9 @@ run_tests _ = error "Please submit right input number"
 -- You should get an exception with the string: "Run-time error"
 
 -- Part 2
-
 -- TODO: Define the types Aexp, Bexp, Stm and Program
 
--- compA :: Aexp -> Code
-compA = undefined -- TODO
-
--- compB :: Bexp -> Code
-compB = undefined -- TODO
-
--- compile :: Program -> Code
-compile = undefined -- TODO
-
--- parse :: String -> Program
-parse = undefined -- TODO
-
--- To help you test your parser
---testParser :: String -> (String, String)
---testParser programCode = (stack2Str stack, store2Str store)
-  --where (_,stack,store) = run(compile (parse programCode), createEmptyStack, createEmptyStore)
-
--- Examples:
--- testParser "x := 5; x := x - 1;" == ("","x=4")
--- testParser "if (not True and 2 <= 5 = 3 == 4) then x :=1; else y := 2;" == ("","y=2")
--- testParser "x := 42; if x <= 43 then x := 1; else (x := 33; x := x+1;)" == ("","x=1")
--- testParser "x := 42; if x <= 43 then x := 1; else x := 33; x := x+1;" == ("","x=2")
--- testParser "x := 42; if x <= 43 then x := 1; else x := 33; x := x+1; z := x+x;" == ("","x=2,z=4")
--- testParser "x := 2; y := (x - 3)*(4 + 2*3); z := x +x*(2);" == ("","x=2,y=-10,z=6")
--- testParser "i := 10; fact := 1; while (not(i == 1)) do (fact := fact * i; i := i - 1;);" == ("","fact=3628800,i=1") --}
 
 
 
 
---Old fetch function
- -- let 
-   -- element = extractValueFromState $ Map.lookup n state
-  --in run (code,(element:stack),state)
-
-
--- Extracts Value from result of lookup on a map, which has Maybe as result
---extractValueFromState:: Maybe StackElement -> StackElement
---extractValueFromState (Just a) = a                                    
---extractValueFromState Nothing = error "Nothing found"
