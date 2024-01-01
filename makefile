@@ -2,7 +2,7 @@ GHC = ghc
 GHC_FLAGS = --make -o MyExecutable
 
 # Source files
-SOURCE_FILES = Main.hs Interpreter.hs Compiler.hs Parser.hs
+SOURCE_FILES = Main.hs Extra.hs Interpreter.hs Compiler.hs Parser.hs
 
 # Output files
 OUTPUT_FILES = *.o *.hi MyExecutable

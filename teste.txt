@@ -1,0 +1,27 @@
+
+class pedro (
+    class sandra (
+        y := 8;
+    )
+    z := sandra();
+    function miguel (num)do(
+        return num;
+    )
+)
+
+
+x := pedro();
+
+print(x.z.y);
+
+
+
+
+
+
+
+
+
+
+
+
