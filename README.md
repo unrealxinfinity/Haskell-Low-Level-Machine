@@ -2,7 +2,7 @@
 > This project consists in two parts thats reassemble a parser, compiler and assembly machine in Haskell.
 
 ### Project developed by G5-T1:
-- João Miguel Vieira Cardoso - up2021 60%
+- João Miguel Vieira Cardoso - up202108732 60%
 - HaoChang Fu - up202108730 40%
 
 ## Part 1
