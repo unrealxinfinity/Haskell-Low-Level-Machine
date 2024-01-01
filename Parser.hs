@@ -61,7 +61,7 @@ lexer str@('§': _) = VarTok varStr : QuoteTok : lexer restStr
 
 lexer str@(chr : _)
       | (isAlpha chr && not (isUpper chr)) || chr == '_' = VarTok varStr : lexer ('£':restStr)
-      where (varStr, restStr) = break (\c -> not (isAlpha c) && c /= '_') str
+      where (varStr, restStr) = break (\c -> not (isAlpha c) && not (isDigit c) && c /= '_') str
 
 lexer (chr : restStr) = error ("unexpected character: '" ++ show chr ++ "'")
 
