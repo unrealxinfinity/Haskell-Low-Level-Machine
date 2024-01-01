@@ -42,15 +42,17 @@ We divided expressions into 2 types:
 - Boolean expressions - This is represented By Bexp which constructors like **"BexpA Aexp | EQexp Bexp Bexp | BoolEQexp Bexp Bexp | LEQexp Bexp Bexp | ANDexp Bexp Bexp | NEGexp Bexp"** where BexpA represents a base expression that represents a Aexp and the rest are recursive data. 
 This way we can define recursive functions to parse through each of the data defined and convert them into instructions.
 
-We also defined different types of statement ,**"Assign String Aexp | While Bexp Program | For Stm Bexp Stm Program | Conditional Bexp Program Program | Print [Bexp] | Function String [String] Program | Return Bexp"**:
+We also defined different types of statement ,**"Assign String Aexp | While Bexp Program | For Stm Bexp Stm Program | Conditional Bexp Program Program | Print [Bexp] | Function String [String] Program | Return Bexp | VoidFuncCall String [Bexp] | Class String Program"**:
 - **"Assign String Aexp"** - This is the assignment statement, which corresponds to "variable:=expression". It takes a string as assigning variable and Aexp as the right side of the operation that can be recursively parsed.
 - **"While Bexp Program"** - This represents the loop statement, "while do". It takes a boolean expression in the left side and the List of statements (Program) in the right side.
 - **"Conditional Bexp Program Program"** - This is the conditional statement,"if then else". This takes a boolean expression and 2 lists of statements so we can construct then "then" and "else" part, representing if-booleanExpression-then-Program-else-Program.
 
 Extras:
-- **"Print Bexp"** - Helper data used to pring boolean expression.  ###### **Nao tenho a certeza**
-- **"Function String [String] Program"** - Data used to simulate function definition
-- **"Return Bexp"** - Data used to simulate return.
+- **"Print [Bexp]"** - Helper data used to pring boolean expression;
+- **"Function String [String] Program"** - Data used to simulate function definition;
+- **"Return Bexp"** - Data used to simulate return;
+- **"VoidFuncCall string [Bexp]"** - Data used to simulate function call with return type void;
+- **"Class String Program"** - Data used to simulate class construction.
 
 To achieve compiling, we used pattern matching that would execute each case according to the type of expression or statement.
 
