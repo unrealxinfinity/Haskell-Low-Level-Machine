@@ -14,5 +14,7 @@ main = do
         [filename] -> do
             fileContent <- readFile filename
             case testParserFile fileContent of
+                ('§':printData) -> putStrLn printData
                 printData -> putStrLn printData
         _ -> putStrLn "Usage: programName filename"
+

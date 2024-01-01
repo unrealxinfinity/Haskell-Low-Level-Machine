@@ -1,11 +1,17 @@
-function addFive (num) do(
-    function addThree (number)do(
-        return number+3;
-    )
-    return addThree (num) +2;
-)
 
-print(addFive(2));
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

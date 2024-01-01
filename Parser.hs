@@ -5,7 +5,7 @@ import Interpreter
 import Data.Char (isSpace, isDigit, digitToInt, isAlpha, isUpper)
 
 
-data Token = EqualTok | PlusTok | TimesTok | IneqTok | EqTok | NotTok | BoolEqTok | AndTok | OpenParTok | CloseParTok | TrueTok | FalseTok | VarTok String | IntTok Integer | IfTok | ThenTok | ElseTok | ColonTok | WhileTok | DoTok | ForTok | PrintTok | FuncTok | RetTok | QuoteTok | CommaTok deriving Show
+data Token = EqualTok | PlusTok | TimesTok | IneqTok | EqTok | NotTok | BoolEqTok | AndTok | OpenParTok | CloseParTok | TrueTok | FalseTok | VarTok String | IntTok Integer | IfTok | ThenTok | ElseTok | ColonTok | WhileTok | DoTok | ForTok | PrintTok | FuncTok | RetTok | QuoteTok | RefTok | ClassTok | CommaTok | DotTok deriving Show
 
 
 stringToInt :: String -> Integer
@@ -18,6 +18,9 @@ lexer [] = []
 
 lexer (chr:restStr)
       | isSpace chr = lexer restStr
+lexer ('£':'.':chr:restStr)
+      | (isAlpha chr && not (isUpper chr)) || chr == '_' = DotTok:lexer (chr:restStr)
+lexer ('£':restStr) = lexer restStr
 lexer ('+':restStr) = PlusTok:lexer restStr
 lexer ('-':restStr) = PlusTok:IntTok (-1):TimesTok:lexer restStr
 lexer ('*':restStr) = TimesTok:lexer restStr
@@ -41,6 +44,8 @@ lexer ('d':'o':restStr) = DoTok:lexer restStr
 lexer ('p':'r':'i':'n':'t':'(':restStr) = PrintTok:lexer restStr
 lexer ('f':'u':'n':'c':'t':'i':'o':'n':' ':restStr) = FuncTok:lexer restStr
 lexer ('r':'e':'t':'u':'r':'n':restStr) = RetTok:lexer restStr
+lexer ('c':'l':'a':'s':'s':' ':restStr) = ClassTok:lexer restStr
+lexer ('&':restStr) = RefTok:lexer restStr
 lexer (',':restStr) = CommaTok:lexer restStr
 lexer ('\'':restStr) = QuoteTok:lexer ('§':restStr)
 
@@ -55,8 +60,8 @@ lexer str@('§': _) = VarTok varStr : QuoteTok : lexer restStr
 
 
 lexer str@(chr : _)
-      | isAlpha chr && not (isUpper chr) = VarTok varStr : lexer restStr
-      where (varStr, restStr) = break (not . isAlpha) str
+      | (isAlpha chr && not (isUpper chr)) || chr == '_' = VarTok varStr : lexer ('£':restStr)
+      where (varStr, restStr) = break (\c -> not (isAlpha c) && c /= '_') str
 
 lexer (chr : restStr) = error ("unexpected character: '" ++ show chr ++ "'")
 
@@ -76,9 +81,13 @@ parseAexpType (VarTok elem:OpenParTok:tokens) =
         (bexp, tokens1) ->
           Just (FuncCall elem bexp, tokens1)
 
+parseAexpType (VarTok elem:DotTok:tokens) =
+      case getClassConnectors (DotTok:tokens) of
+        (aexp, tokens1) ->
+          Just (ClassCall elem aexp, tokens1)
+
 parseAexpType (VarTok elem:tokens) =
       Just (Var elem, tokens)
-
 
 
 
@@ -91,6 +100,22 @@ parseAexpType (OpenParTok:tokens) =
 
 parseAexpType _ =
       Nothing
+
+getClassConnectors :: [Token] -> ([Aexp], [Token])
+
+getClassConnectors (DotTok:VarTok elem:OpenParTok:tokens) =
+      case getPrintVariables tokens of
+        (bexp, tokens1) ->
+          case getClassConnectors tokens1 of
+            (aexp, tokens2) ->
+              (FuncCall elem bexp:aexp, tokens2)
+
+getClassConnectors (DotTok:VarTok elem:tokens) =
+      case getClassConnectors tokens of
+        (aexp, tokens2) ->
+          (Var elem:aexp, tokens2)
+
+getClassConnectors tokens = ([], tokens)
 
 
 parseBexpType :: [Token] -> Maybe (Bexp, [Token])
@@ -194,15 +219,6 @@ parseAndOrBoolEqOrNotOrEqOrIneq tokens =
 
 
 
-isValidConditionFormat :: [Token] -> Int -> Bool
-isValidConditionFormat _ 0 = False
-isValidConditionFormat (ThenTok:_) _ = True
-isValidConditionFormat (ElseTok:_) _ = True
-isValidConditionFormat (DoTok :_) _ = True
-isValidConditionFormat [] _ = True
-isValidConditionFormat (IntTok elem:tokens) (counter) = isValidConditionFormat tokens counter
-isValidConditionFormat (VarTok elem:tokens) (counter) = isValidConditionFormat tokens counter
-isValidConditionFormat (_:tokens) (counter) = isValidConditionFormat tokens (counter-1)
 
 branchFormat :: [Token] -> Pair Program [Token]
 branchFormat (CloseParTok:_) = error "Bad Format of Conditional" 
@@ -216,23 +232,8 @@ parseStm :: [Token] -> Maybe (Stm, [Token])
 
 parseStm [] = Nothing
 
-parseStm (IfTok:OpenParTok:tokens) = 
-      case parseAndOrBoolEqOrNotOrEqOrIneq tokens of
-        Just (bexp, CloseParTok:ThenTok:tokens1) ->
-          case branchFormat tokens1 of
-            (stm1, ElseTok:tokens2) ->
-              case branchFormat tokens2 of
-                (stm2, ColonTok:tokens3) ->
-                  Just (Conditional (bexp) (stm1) (stm2), ColonTok:tokens3)
-                (stm2, tokens3) ->
-                  Just (Conditional (bexp) (stm1) (stm2), ColonTok:tokens3)
-            (stm1, tokens2) ->
-              Just (Conditional (bexp) (stm1) [], ColonTok:tokens2)
-        
-        result -> Nothing
 
-parseStm (IfTok:tokens)
-      | isValidConditionFormat (tokens) (2) =
+parseStm (IfTok:tokens)=
               case parseAndOrBoolEqOrNotOrEqOrIneq tokens of
                 Just (bexp, ThenTok:tokens1) ->
                   case branchFormat tokens1 of
@@ -253,18 +254,8 @@ parseStm (VarTok varName:EqualTok:tokens) =
               Just (Assign (varName) aexp, tokens1)
             result -> Nothing
 
-parseStm (WhileTok:OpenParTok:tokens) = 
-          case parseAndOrBoolEqOrNotOrEqOrIneq tokens of
-              Just (bexp, CloseParTok:DoTok:tokens1) ->
-                case branchFormat tokens1 of
-                  (stm1, ColonTok:tokens2) ->
-                    Just (While (bexp) (stm1), ColonTok:tokens2)
-                  (stm1, tokens2) ->
-                    Just (While (bexp) (stm1), ColonTok:tokens2)
-              result -> Nothing
 
-parseStm (WhileTok:tokens) 
-  |isValidConditionFormat tokens 2 == True =
+parseStm (WhileTok:tokens) =
     case parseAndOrBoolEqOrNotOrEqOrIneq tokens of
       Just (bexp,DoTok:tokens1) ->
         case branchFormat tokens1 of
@@ -311,22 +302,37 @@ parseStm (RetTok:tokens) =
                 Just (bexp, ColonTok:tokens1) ->
                   Just (Return bexp, ColonTok:tokens1)
                 _ -> Nothing
+
+parseStm (VarTok funcName:OpenParTok:tokens) =
+      case getPrintVariables tokens of
+        (bexp, tokens1) ->
+          Just (VoidFuncCall funcName bexp, tokens1)
+
+parseStm (ClassTok:VarTok className:OpenParTok:tokens) = 
+      case branchFormat (OpenParTok:tokens) of
+        (stm, tokens1) ->
+          case justAssignOrFuncOrClass stm of
+            True -> 
+              Just (Class className stm, ColonTok:tokens1)
+            False ->
+              error "Using illegal statements inside a class"
+
+
           
 
 parseStm _ = Nothing
 
+justAssignOrFuncOrClass :: Program -> Bool
 
-getFunctionParam :: [Token] -> Pair [String] [Token]
+justAssignOrFuncOrClass [] = True
 
-getFunctionParam (CloseParTok:tokens) = ([], tokens)
+justAssignOrFuncOrClass (Assign _ _:program) = justAssignOrFuncOrClass program
 
-getFunctionParam (VarTok varName:CloseParTok:tokens) = ([varName], tokens)
+justAssignOrFuncOrClass (Class _ _:program) = justAssignOrFuncOrClass program
 
-getFunctionParam (VarTok varName:CommaTok:tokens) =
-        case getFunctionParam tokens of
-          (str, tokens1) -> (varName:str, tokens1)
+justAssignOrFuncOrClass (Function _ _ _:program) = justAssignOrFuncOrClass program
 
-getFunctionParam _ = error "Error while getting function parameters"
+justAssignOrFuncOrClass _ = False
 
 
 
@@ -400,6 +406,14 @@ getPrintVariables (QuoteTok:VarTok varName:QuoteTok:CommaTok:tokens) =
 
 getPrintVariables (QuoteTok:VarTok varName:QuoteTok:CloseParTok:tokens) = ([BexpA (PrintStr varName)], tokens)
 
+
+getPrintVariables (RefTok:VarTok varName:CommaTok:tokens) = 
+        case getPrintVariables tokens of
+          (bexp, tokens1) ->
+            (BexpA (Var ('&':varName)):bexp, tokens1)
+
+getPrintVariables (RefTok:VarTok varName:CloseParTok:tokens) = ([BexpA (Var ('&':varName))], tokens)
+
 getPrintVariables (elem:tokens) =
           case parseSumOrSubOrProdOrInt (elem:tokens) of
             Just (aexp, CommaTok:tokens1) ->
@@ -422,4 +436,17 @@ getPrintVariables (elem:tokens) =
 
 
 getPrintVariables _ = error "Error while getting print variables"
+
+
+getFunctionParam :: [Token] -> Pair [String] [Token]
+
+getFunctionParam (CloseParTok:tokens) = ([], tokens)
+
+getFunctionParam (VarTok varName:CloseParTok:tokens) = ([varName], tokens)
+
+getFunctionParam (VarTok varName:CommaTok:tokens) =
+        case getFunctionParam tokens of
+          (str, tokens1) -> (varName:str, tokens1)
+
+getFunctionParam _ = error "Error while getting function parameters"
 

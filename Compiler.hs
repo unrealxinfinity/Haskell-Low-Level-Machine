@@ -3,10 +3,10 @@ module Compiler where
 import Interpreter
 
 
-data Aexp = T | F | Var String | Const Integer | PrintStr String | FuncCall String [Bexp] | ADDexp Aexp Aexp | SUBexp Aexp Aexp | MULTexp Aexp Aexp deriving Show 
+data Aexp = T | F | Var String | Const Integer | PrintStr String | FuncCall String [Bexp] | ClassCall String [Aexp] | ADDexp Aexp Aexp | SUBexp Aexp Aexp | MULTexp Aexp Aexp deriving Show 
 
 data Bexp = BexpA Aexp | EQexp Bexp Bexp | BoolEQexp Bexp Bexp | LEQexp Bexp Bexp | ANDexp Bexp Bexp | NEGexp Bexp deriving Show
-data Stm = Assign String Aexp | While Bexp Program | For Stm Bexp Stm Program | Conditional Bexp Program Program | Print [Bexp] | Function String [String] Program | Return Bexp deriving Show
+data Stm = Assign String Aexp | While Bexp Program | For Stm Bexp Stm Program | Conditional Bexp Program Program | Print [Bexp] | Function String [String] Program | Return Bexp | VoidFuncCall String [Bexp] | Class String Program deriving Show
 type Program = [Stm]
 
 
@@ -49,16 +49,11 @@ compile (Conditional bexp stm1 stm2:program) = compB bexp ++ [Branch progCalcula
    where 
     progCalculated = compile stm1
     progCalculated2 = compile stm2
-    
+
 compile (While bexp prog:program) = [Loop (compB bexp) (compile prog)] ++ compile program
 
 
 
-compile (For stm1 bexp stm2 stm3:program) = compile [stm1] ++ [Loop (compB bexp) (compile (stm3 ++ [stm2]))] ++ compile program
-
-compile (Function funcName param stm:program) = compile program
-
-compile (Print bexp:program) = compile program
 
 
 compile _ = error "Error while compiling"
